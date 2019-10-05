@@ -10,8 +10,8 @@ module.exports.server = {
 		connected: function(player)
 		{
 			player.state = {
-				mesh: 'mesh/cube',
-				texture: 'tex/test',
+				mesh: 'mesh/player-1',
+				texture: 'tex/player-1',
 				position: [0, 0, 0],
                 q:        [0, 0, 0, 1],
                 velocity: [0, 0, 0],

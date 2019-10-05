@@ -12,8 +12,10 @@ const asset_list = [
     'shaders/basic_textured.frag',
     'imgs/stars.jpg',
     'imgs/test.png',
+    'imgs/player-1.png',
     'meshes/plane.json',
-    'meshes/exported-cube.json'
+    'meshes/exported-cube.json',
+    'meshes/player-1.json'
 ];
 
 const k = {
@@ -53,9 +55,15 @@ g.initialize(function ()
         );
 
         g.web.assets['mesh/cube'] = g.web.gfx.mesh.create(g.web.assets['meshes/exported-cube.json']);
+        g.web.assets['mesh/player-1'] = g.web.gfx.mesh.create(g.web.assets['meshes/player-1.json']);
+
         g.web.assets['tex/stars'] = g.web.gfx.texture.repeating()
                                                      .pixelated()
                                                      .create(g.web.assets["imgs/stars.jpg"]);
+
+        g.web.assets['tex/player-1'] = g.web.gfx.texture.repeating()
+                                                        .pixelated()
+                                                        .create(g.web.assets["imgs/player-1.png"]);
 
         g.web.assets['tex/test'] = g.web.gfx.texture.repeating()
                                                      .pixelated()
@@ -114,6 +122,8 @@ g.update(function (dt)
     if (g.web.key.is_pressed('s')) { thrust = thrust.add([0, 0, -1]); }
     if (g.web.key.is_pressed('a')) { thrust = thrust.add([-1, 0, 0]); }
     if (g.web.key.is_pressed('d')) { thrust = thrust.add([1, 0, 0]); }
+    if (g.web.key.is_pressed(' ')) { thrust = thrust.add([0,-1, 0]); }
+    if (g.web.key.is_pressed('Shift')) { thrust = thrust.add([0, 1, 0]); }
 
     var me = game.state.players[game.my_id]
     if (g.web.key.is_pressed('q')) { me.q = me.q.quat_mul([].quat_rotation([0, 0, 1], dt)); }
@@ -121,6 +131,7 @@ g.update(function (dt)
 
     if (thrust.sub(me.thrust).len() > 0)
     {
+        g.web.socket().send({topic:'ori', q: me.q});
         g.web.socket().send({topic:'thrust', thrust: thrust});
         me.thrust = thrust;
     }
@@ -190,8 +201,8 @@ g.web.draw(function (dt)
     }
 
     draw_player({
-        mesh: 'mesh/cube',
-        texture: 'tex/test',
+        mesh: 'mesh/player-1',
+        texture: 'tex/player-1',
         position: [0, 0, 10],
         q: [0, 0, 0, 1]
     });
