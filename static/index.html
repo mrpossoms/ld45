@@ -16,6 +16,15 @@ const asset_list = [
     'meshes/exported-cube.json'
 ];
 
+const k = {
+    camera: {
+        snap: 10
+    },
+    mouse: {
+        sensitivity: 0.005
+    }
+};
+
 var game = {
     cam: new g.web.gfx.camera(),
     t: 0,
@@ -24,6 +33,7 @@ var game = {
 
 game.cam.view([0, 0, 0], [0, 0, 0], [0, 1, 0]);
 game.cam.position = [0, 0, 0];
+game.cam.up = [0, 1, 0];
 game.cam.q = [0, 0, 0, 1];
 
 g.web.canvas(document.getElementsByTagName('canvas')[0]);
@@ -64,8 +74,8 @@ g.initialize(function ()
 
 g.web.pointer.on_move(function (event)
 {
-    const dqx = [].quat_rotation([0, 1, 0], event.movementX / 100);
-    const dqy = [].quat_rotation([1, 0, 0], event.movementY / 100);
+    const dqx = [].quat_rotation([0, 1, 0], event.movementX * k.mouse.sensitivity);
+    const dqy = [].quat_rotation([1, 0, 0], event.movementY * k.mouse.sensitivity);
     const dq = dqx.quat_mul(dqy)
     game.player.q = game.player.q.quat_mul(dq);
     // console.log([event.movementX, event.movementY]);s
@@ -97,7 +107,6 @@ g.update(function (dt)
 
 
     update_camera(game.cam, game.player, 8, dt);
-    // cam.view(cam.position, ([0, 0, 1]), ([0, 1, 0]));
 
     game.t += dt;
 });
@@ -108,11 +117,11 @@ function update_camera(camera, player, dist, dt)
     const forward = q.quat_rotate_vector([0, 0, 1]);
     var up = q.quat_rotate_vector([0, 1, 0]);
 
+    camera.position = camera.position.lerp(player.position.add(forward.mul(-dist)), dt * k.camera.snap);
+    camera.up = camera.up.lerp(up, dt * k.camera.snap);
 
-    camera.look_at(player.position.add(forward.mul(-dist)), player.position, up);
 
-
-    // camera.look_at([0, 0, -5], player.position, [0,1,0]);
+    camera.look_at(camera.position, player.position, camera.up);
 }
 
 function draw_skybox()
