@@ -73,6 +73,10 @@ const g = {
 	},
 };
 
+Array.prototype.is_matrix = function()
+{
+	return this[0].constructor === Array;
+}
 
 Array.prototype.new_matrix = function(rows, cols)
 {
@@ -107,12 +111,30 @@ Array.prototype.sub = function(v)
 
 Array.prototype.mul = function(v)
 {
-	var r = new Array(this.length);
+	var w = new Array(this.length);
 
-	if (typeof v === 'number')        { for (var i = this.length; i--;) r[i] = this[i] * v; }
-	else if (v.constructor === Array) { for (var i = this.length; i--;) r[i] = this[i] * v[i]; }
+	if (typeof v === 'number')
+	{
+		if (this.is_matrix())
+		{
+			const dims = this.mat_dims();
+			for (var r = dims[0]; r--;)
+			{
+				w[r] = new Array(dims[1]);
+				for (var c = dims[1]; c--;)
+				{
+					w[r][c] = this[r][c] * v;
+				}
+			}
+		}
+		else
+		{
+			for (var i = this.length; i--;) w[i] = this[i] * v;
+		}
+	}
+	else if (v.constructor === Array && typeof v[0] === 'number') { for (var i = this.length; i--;) w[i] = this[i] * v[i]; }
 
-	return r;
+	return w;
 };
 
 Array.prototype.div = function(v)

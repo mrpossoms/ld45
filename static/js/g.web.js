@@ -39,15 +39,30 @@ g.web = {
             this._view = [].I(4);
             this._proj = [].I(4);
             this._pos = [0,0,0];
-            this._sub = [0,0,1];
+            this._forward = [0,0,1];
             this._up = [0,1,0];
 
-            this.view = function(position, subject, up)
+            this.look_at = function(position, subject, up)
             {
                 if (position && subject && up)
                 {
-                    const forward = position.sub(subject).norm();
-                    this._view = [].view(position, forward, up.norm());
+                    this._pos = position;
+                    this._forward = position.sub(subject).norm();
+                    this._up = up.norm();
+                    this._view = [].view(this._pos, this._forward, this._up);
+                }
+
+                return this._view;
+            };
+
+            this.view = function(position, forward, up)
+            {
+                if (position && forward && up)
+                {
+                    this._pos = position;
+                    this._forward = forward.norm();
+                    this._up = up.norm();
+                    this._view = [].view(this._pos, this._forward, this._up);
                 }
 
                 return this._view;

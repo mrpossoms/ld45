@@ -7,15 +7,22 @@
 
 function on_load()
 {
+const asset_list = [
+    'shaders/basic_textured.vert',
+    'shaders/basic_textured.frag',
+    'imgs/stars.jpg',
+    'meshes/plane.json',
+    'meshes/exported-cube.json'
+];
 
+var game = {
+    cam: new g.web.gfx.camera(),
+    t: 0
+};
 
-var cam = new g.web.gfx.camera();
-var plane_pos = [ 0, 0, 0 ];
-var plane_q = [0, 0, 0, 1];
-
-cam.view([0, 0, 0], [0, 0, 0], [0, 1, 0]);
-cam.position = [0, 0, -2];
-cam.q = [0, 0, 0, 1];
+game.cam.view([0, 0, 0], [0, 0, 0], [0, 1, 0]);
+game.cam.position = [0, 0, 0];
+game.cam.q = [0, 0, 0, 1];
 
 g.web.canvas(document.getElementsByTagName('canvas')[0]);
 
@@ -23,13 +30,6 @@ g.initialize(function ()
 {
     g.is_running = false;
 
-    const asset_list = [
-    'shaders/basic_textured.vert',
-    'shaders/basic_textured.frag',
-    'imgs/stars.jpg',
-    'meshes/plane.json',
-    'meshes/exported-cube.json'
-    ];
 
     g.web.assets.load(asset_list,
     function() {
@@ -38,7 +38,6 @@ g.initialize(function ()
             g.web.assets['shaders/basic_textured.frag']
         );
 
-        // g.web.assets['mesh/plane'] = g.web.gfx.mesh.create(g.web.assets["meshes/plane.json"]);
         g.web.assets['mesh/cube'] = g.web.gfx.mesh.create(g.web.assets['meshes/exported-cube.json']);
         g.web.assets['tex/stars'] = g.web.gfx.texture.repeating()
                                                      .pixelated()
@@ -52,8 +51,8 @@ g.initialize(function ()
 
 g.web.pointer.on_move(function (event)
 {
-    cam.q = cam.q.quat_mul([].quat_rotation([0, 1, 0], -event.movementX / 100));
-    cam.q = cam.q.quat_mul([].quat_rotation([1, 0, 0], -event.movementY / 100));
+    game.cam.q = game.cam.q.quat_mul([].quat_rotation([0, 1, 0], -event.movementX / 100));
+    game.cam.q = game.cam.q.quat_mul([].quat_rotation([1, 0, 0], -event.movementY / 100));
     // console.log([event.movementX, event.movementY]);s
 });
 
@@ -72,46 +71,48 @@ g.web.on_message(function (msg)
 
 g.update(function (dt)
 {
-    const forward = cam.q.quat_rotate_vector([0, 0, -1]);
-    const up = cam.q.quat_rotate_vector([0, 1, 0]);
+    const forward = game.cam.q.quat_rotate_vector([0, 0, -1]);
+    const up = game.cam.q.quat_rotate_vector([0, 1, 0]);
     const right = forward.cross(up);
 
-	if (g.web.key.is_pressed('w')) { cam.position = cam.position.add(forward.mul(-dt)); }
-    if (g.web.key.is_pressed('s')) { cam.position = cam.position.add(forward.mul(dt)); }
-    if (g.web.key.is_pressed('a')) { cam.position = cam.position.add(right.mul(dt)); }
-    if (g.web.key.is_pressed('d')) { cam.position = cam.position.add(right.mul(-dt)); }
+	if (g.web.key.is_pressed('w')) { game.cam.position = game.cam.position.add(forward.mul(-dt)); }
+    if (g.web.key.is_pressed('s')) { game.cam.position = game.cam.position.add(forward.mul(dt)); }
+    if (g.web.key.is_pressed('a')) { game.cam.position = game.cam.position.add(right.mul(dt)); }
+    if (g.web.key.is_pressed('d')) { game.cam.position = game.cam.position.add(right.mul(-dt)); }
 
-    plane_pos = [ Math.cos(t), Math.sin(t), 0 ].mul(0);
-    cam._view = [].view(cam.position.sub(forward), forward, up);
+    game.cam.view(game.cam.position.sub(forward), forward, up);
     // cam.view(cam.position, ([0, 0, 1]), ([0, 1, 0]));
+
+    game.t += dt;
 });
 
-var t = 0;
+
+function draw_skybox()
+{
+    var view = [].view([0,0,0], game.cam._forward, game.cam._up);
+
+    gl.disable(gl.DEPTH_TEST);
+    g.web.assets['mesh/cube'].using_shader('basic_textured')
+                             .with_attribute({name:'a_position', buffer: 'positions', components: 3})
+                             .with_attribute({name:'a_tex_coord', buffer: 'texture_coords', components: 2})
+                             .set_uniform('u_proj').mat4(game.cam.projection())
+                             .set_uniform('u_view').mat4(view)
+                             .set_uniform('u_model').mat4([].I(4).mul(1100))
+                             .set_uniform('u_texture').texture(g.web.assets['tex/stars'])
+                             .draw_tris();
+    gl.enable(gl.DEPTH_TEST);
+}
+
 
 g.web.draw(function (dt)
 {
-    t += dt;
     if (g.is_running == false) { return; }
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    const mesh = g.web.assets['mesh/cube'];
+    game.cam.perspective(Math.PI / 4, 0.1, 1000);
 
-    // cam.perspective();
-    cam.orthographic();
-
-    plane_q = plane_q.quat_mul([].quat_rotation([0, 0, 1], dt));
-
-    // cam._view = cam.q.quat_to_matrix();
-
-    mesh.using_shader('basic_textured')
-        .with_attribute({name:'a_position', buffer: 'positions', components: 3})
-        .with_attribute({name:'a_tex_coord', buffer: 'texture_coords', components: 2})
-        .with_camera(cam)
-        .set_uniform('u_model').mat4([].I(4))
-        // .set_uniform('u_model').mat4(cam.q.quat_to_matrix())
-        .set_uniform('u_texture').texture(g.web.assets['tex/stars'])
-        .draw_tris();
+    draw_skybox();
 });
 
 g.start();
