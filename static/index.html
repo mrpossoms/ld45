@@ -12,10 +12,12 @@ const asset_list = [
     'shaders/basic_textured.frag',
     'imgs/stars.jpg',
     'imgs/test.png',
+    'imgs/player-0.png',
     'imgs/player-1.png',
     'meshes/plane.json',
     'meshes/exported-cube.json',
-    'meshes/player-1.json'
+    'meshes/player-1.json',
+    'meshes/player-0.json'
 ];
 
 const k = {
@@ -56,10 +58,14 @@ g.initialize(function ()
 
         g.web.assets['mesh/cube'] = g.web.gfx.mesh.create(g.web.assets['meshes/exported-cube.json']);
         g.web.assets['mesh/player-1'] = g.web.gfx.mesh.create(g.web.assets['meshes/player-1.json']);
+        g.web.assets['mesh/player-0'] = g.web.gfx.mesh.create(g.web.assets['meshes/player-0.json']);
 
         g.web.assets['tex/stars'] = g.web.gfx.texture.repeating()
                                                      .pixelated()
                                                      .create(g.web.assets["imgs/stars.jpg"]);
+        g.web.assets['tex/player-0'] = g.web.gfx.texture.repeating()
+                                                     .pixelated()
+                                                     .create(g.web.assets["imgs/player-0.png"]);                                                     
 
         g.web.assets['tex/player-1'] = g.web.gfx.texture.repeating()
                                                         .pixelated()
