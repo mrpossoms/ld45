@@ -28,7 +28,9 @@ const k = {
 var game = {
     cam: new g.web.gfx.camera(),
     t: 0,
-    player: {}
+    // player: {},
+    my_id: 0,
+    state: {}
 };
 
 game.cam.view([0, 0, 0], [0, 0, 0], [0, 1, 0]);
@@ -60,12 +62,13 @@ g.initialize(function ()
                                                      .create(g.web.assets["imgs/test.png"]);
         g.is_running = true;
 
-        game.player = {
-            mesh: g.web.assets['mesh/cube'],
-            texture: g.web.assets['tex/test'],
-            position: [0, 0, 0],
-            q: [0, 0, 0, 1]
-        };
+        // me = {
+        //     mesh: g.web.assets['mesh/cube'],
+        //     texture: g.web.assets['tex/test'],
+        //     position: [0, 0, 0],
+        //     thrust: [0, 0, 0],
+        //     q: [0, 0, 0, 1]
+        // };
     });
 
 	return true;
@@ -74,10 +77,14 @@ g.initialize(function ()
 
 g.web.pointer.on_move(function (event)
 {
+    var q = game.state.players[game.my_id].q || [0, 0, 0, 1];
+
     const dqx = [].quat_rotation([0, 1, 0], event.movementX * k.mouse.sensitivity);
     const dqy = [].quat_rotation([1, 0, 0], event.movementY * k.mouse.sensitivity);
     const dq = dqx.quat_mul(dqy)
-    game.player.q = game.player.q.quat_mul(dq);
+    q = q.quat_mul(dq);
+
+    g.web.socket().send({topic:'ori', q: q});
 });
 
 
@@ -86,26 +93,39 @@ g.web.pointer.on_delta(function (event) { });
 
 g.web.on_message(function (msg)
 {
-
+    switch(msg.topic)
+    {
+        case 'state':
+            game.state = msg.state;
+            game.my_id = msg.player_id;
+            break;
+    }
 });
 
 
 g.update(function (dt)
 {
-    const forward = game.player.q.quat_rotate_vector([0, 0, 1]);
-    const up = game.player.q.quat_rotate_vector([0, 1, 0]);
-    const right = forward.cross(up);
+    // const forward = me.q.quat_rotate_vector([0, 0, 1]);
+    // const up = game.player.q.quat_rotate_vector([0, 1, 0]);
+    // const right = forward.cross(up);
 
-	if (g.web.key.is_pressed('w')) { game.player.position = game.player.position.add(forward.mul(dt)); }
-    if (g.web.key.is_pressed('s')) { game.player.position = game.player.position.add(forward.mul(-dt)); }
-    if (g.web.key.is_pressed('a')) { game.player.position = game.player.position.add(right.mul(dt)); }
-    if (g.web.key.is_pressed('d')) { game.player.position = game.player.position.add(right.mul(-dt)); }
+    var thrust = [0, 0, 0];
+	if (g.web.key.is_pressed('w')) { thrust = thrust.add([0, 0, 1]); }
+    if (g.web.key.is_pressed('s')) { thrust = thrust.add([0, 0, -1]); }
+    if (g.web.key.is_pressed('a')) { thrust = thrust.add([-1, 0, 0]); }
+    if (g.web.key.is_pressed('d')) { thrust = thrust.add([1, 0, 0]); }
 
-    if (g.web.key.is_pressed('q')) { game.player.q = game.player.q.quat_mul([].quat_rotation([0, 0, 1], dt)); }
-    if (g.web.key.is_pressed('e')) { game.player.q = game.player.q.quat_mul([].quat_rotation([0, 0, 1], -dt)); }
+    var me = game.state.players[game.my_id]
+    if (g.web.key.is_pressed('q')) { me.q = me.q.quat_mul([].quat_rotation([0, 0, 1], dt)); }
+    if (g.web.key.is_pressed('e')) { me.q = me.q.quat_mul([].quat_rotation([0, 0, 1], -dt)); }
 
+    if (thrust.sub(me.thrust).len() > 0)
+    {
+        g.web.socket().send({topic:'thrust', thrust: thrust});
+        me.thrust = thrust;
+    }
 
-    update_camera(game.cam, game.player, 8, dt);
+    update_camera(game.cam, game.state.players[game.my_id], 8, dt);
 
     game.t += dt;
 });
@@ -143,15 +163,15 @@ function draw_player(player)
 {
     // const model = [].translate(player.position).mat_mul(player.q.quat_inverse().quat_to_matrix());
     const model = player.q.quat_inverse().quat_to_matrix().mat_mul([].translate(player.position));
-    // const model = [].I(4);
+    const mesh = g.web.assets[player.mesh];
 
-    player.mesh.using_shader('basic_textured')
-               .with_attribute({name:'a_position', buffer: 'positions', components: 3})
-               .with_attribute({name:'a_tex_coord', buffer: 'texture_coords', components: 2})
-               .with_camera(game.cam)
-               .set_uniform('u_model').mat4(model)
-               .set_uniform('u_texture').texture(player.texture)
-               .draw_tris();
+    mesh.using_shader('basic_textured')
+        .with_attribute({name:'a_position', buffer: 'positions', components: 3})
+        .with_attribute({name:'a_tex_coord', buffer: 'texture_coords', components: 2})
+        .with_camera(game.cam)
+        .set_uniform('u_model').mat4(model)
+        .set_uniform('u_texture').texture(g.web.assets[player.texture])
+        .draw_tris();
 }
 
 g.web.draw(function (dt)
@@ -164,11 +184,14 @@ g.web.draw(function (dt)
 
     draw_skybox();
 
-    draw_player(game.player);
+    for (const player_id in game.state.players)
+    {
+        draw_player(game.state.players[player_id]);
+    }
 
     draw_player({
-        mesh: g.web.assets['mesh/cube'],
-        texture: g.web.assets['tex/test'],
+        mesh: 'mesh/cube',
+        texture: 'tex/test',
         position: [0, 0, 10],
         q: [0, 0, 0, 1]
     });

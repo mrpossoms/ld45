@@ -41,7 +41,7 @@ const g = {
 		{
 			g.web._socket = io();
 			g.web._socket.on('message', g.web._on_message);
-
+			g.web.socket = function() { return g.web._socket; }
             if (!g.web.gfx._initalize()) { return; }
 		}
 
