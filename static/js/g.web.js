@@ -47,7 +47,7 @@ g.web = {
                 if (position && subject && up)
                 {
                     this._pos = position;
-                    this._forward = position.sub(subject).norm();
+                    this._forward = subject.sub(position).norm();
                     this._up = up.norm();
                     this._view = [].view(this._pos, this._forward, this._up);
                 }
@@ -72,6 +72,13 @@ g.web = {
             {
                 this._pos = p;
                 this.view(this._pos, this._sub, this._up);
+                return this;
+            };
+
+            this.up = function(u)
+            {
+                this._up = u;
+                this.view(this._up, this._sub, this._up);
                 return this;
             };
 

@@ -372,10 +372,10 @@ Array.prototype.cross = function(v)
 Array.prototype.translate = function(t)
 {
 	return [
-		[ 1, 0, 0, 0 ],
-		[ 0, 1, 0, 0 ],
-		[ 0, 0, 1, 0 ],
-		[ t[0], t[1], t[2], 1.   ]
+		[    1,    0,    0,    0    ],
+		[    0,    1,    0,    0    ],
+		[    0,    0,    1,    0    ],
+		[ -t[0], -t[1], -t[2], 1.   ]
 	];
 };
 
@@ -413,26 +413,28 @@ Array.prototype.orthographic = function(r, l, t, b, n, f)
 
 Array.prototype.view = function(position, forward, up)
 {
-	const r = up.cross(forward).mul(-1);
+	const r = forward.cross(up).mul(1);
 	const u = up;
+	const t = r.cross(forward);
 	const f = forward;
 	const p = position;
 
 	var ori = [
 		[ r[0], r[1], r[2], 0 ],
-		[ u[0], u[1], u[2], 0 ],
+		[ t[0], t[1], t[2], 0 ],
 		[ f[0], f[1], f[2], 0 ],
 		[    0,    0,    0, 1 ]
-	];
+	].transpose();
 
 	var trans = [
 		[     1,     0,     0,    0 ],
 		[     0,     1,     0,    0 ],
 		[     0,     0,     1,    0 ],
-		[ -p[0], -p[1], -p[2],    1 ]
+		[  p[0],  p[1],  p[2],    1 ]
 	];
 
 	return trans.mat_mul(ori);
+	// return ori.mat_mul(trans);
 };
 
 Array.prototype.rotation = function(axis, angle)
@@ -483,29 +485,45 @@ Array.prototype.quat_to_matrix = function()
 	var a2 = a * a, b2 = b * b, c2 = c * c, d2 = d * d;
 
 	return [
-	    [ a2 + b2 - c2 - d2, 2 * (b*c - a*d)  , 2 * (b*d + a*c)  , 0],
-	    [ 2 * (b*c + a*d)  , a2 - b2 + c2 - d2, 2 * (c*d - a*b)  , 0],
-	    [ 2 * (b*d - a*c)  , 2 * (c*d + a*b)  , a2 - b2 - c2 + d2, 0],
+	    [ a2 + b2 - c2 - d2, 2*b*c - 2*a*d  , 2*b*d + 2*a*c  , 0],
+	    [ 2*b*c + 2*a*d  , a2 - b2 + c2 - d2, 2*c*d - 2*a*b  , 0],
+	    [ 2*b*d - 2*a*c  , 2*c*d + 2*a*b  , a2 - b2 - c2 + d2, 0],
 	    [ 0                , 0                , 0                , 1],
 	];
 };
 
+Array.prototype.quat_conjugate = function()
+{
+	return this.mul([-1, -1, -1, 1]);
+}
+
+Array.prototype.quat_inverse = function()
+{
+	const mag_2 = this.dot(this);
+	return this.quat_conjugate().mul(1/mag_2);
+}
 
 Array.prototype.quat_mul = function(q)
 {
-	var q0 = this;
-	var q1 = q;
+	// var q0 = this;
+	// var q1 = q;
 
-	var t3 = q0.slice(0, 3);
-	var o3 = q1.slice(0, 3);
+	// var t3 = q0.slice(0, 3);
+	// var o3 = q1.slice(0, 3);
 
-	var r = t3.cross(o3);
-	var w = t3.mul(q1[3]);
-	r = r.add(w);
-	w = o3.mul(q0[3]);
-	r = r.add(w);
+	// var r = t3.cross(o3);
+	// var w = t3.mul(q1[3]);
+	// r = r.add(w);
+	// w = o3.mul(q0[3]);
+	// r = r.add(w);
 
-	return r.concat(q0[3] * q1[3] - t3.dot(o3));
+	// return r.concat(q0[3] * q1[3] - t3.dot(o3));
+	return [
+	    this[3] * q[0] + this[0] * q[3] + this[1] * q[2] - this[2] * q[1],  // i
+	    this[3] * q[1] - this[0] * q[2] + this[1] * q[3] + this[2] * q[0],  // j
+	    this[3] * q[2] + this[0] * q[1] - this[1] * q[0] + this[2] * q[3],   // k
+	    this[3] * q[3] - this[0] * q[0] - this[1] * q[1] - this[2] * q[2],  // 1
+	];
 };
 
 

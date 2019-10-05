@@ -11,13 +11,15 @@ const asset_list = [
     'shaders/basic_textured.vert',
     'shaders/basic_textured.frag',
     'imgs/stars.jpg',
+    'imgs/test.png',
     'meshes/plane.json',
     'meshes/exported-cube.json'
 ];
 
 var game = {
     cam: new g.web.gfx.camera(),
-    t: 0
+    t: 0,
+    player: {}
 };
 
 game.cam.view([0, 0, 0], [0, 0, 0], [0, 1, 0]);
@@ -41,8 +43,19 @@ g.initialize(function ()
         g.web.assets['mesh/cube'] = g.web.gfx.mesh.create(g.web.assets['meshes/exported-cube.json']);
         g.web.assets['tex/stars'] = g.web.gfx.texture.repeating()
                                                      .pixelated()
-                                                     .create(g.web.assets["imgs/stars.jpg"])
+                                                     .create(g.web.assets["imgs/stars.jpg"]);
+
+        g.web.assets['tex/test'] = g.web.gfx.texture.repeating()
+                                                     .pixelated()
+                                                     .create(g.web.assets["imgs/test.png"]);
         g.is_running = true;
+
+        game.player = {
+            mesh: g.web.assets['mesh/cube'],
+            texture: g.web.assets['tex/test'],
+            position: [0, 0, 0],
+            q: [0, 0, 0, 1]
+        };
     });
 
 	return true;
@@ -51,16 +64,15 @@ g.initialize(function ()
 
 g.web.pointer.on_move(function (event)
 {
-    game.cam.q = game.cam.q.quat_mul([].quat_rotation([0, 1, 0], -event.movementX / 100));
-    game.cam.q = game.cam.q.quat_mul([].quat_rotation([1, 0, 0], -event.movementY / 100));
+    const dqx = [].quat_rotation([0, 1, 0], event.movementX / 100);
+    const dqy = [].quat_rotation([1, 0, 0], event.movementY / 100);
+    const dq = dqx.quat_mul(dqy)
+    game.player.q = game.player.q.quat_mul(dq);
     // console.log([event.movementX, event.movementY]);s
 });
 
 
-g.web.pointer.on_delta(function (event)
-{
-    // console.log([event.movementX, event.movementY]);
-});
+g.web.pointer.on_delta(function (event) { });
 
 
 g.web.on_message(function (msg)
@@ -71,21 +83,37 @@ g.web.on_message(function (msg)
 
 g.update(function (dt)
 {
-    const forward = game.cam.q.quat_rotate_vector([0, 0, -1]);
-    const up = game.cam.q.quat_rotate_vector([0, 1, 0]);
+    const forward = game.player.q.quat_rotate_vector([0, 0, 1]);
+    const up = game.player.q.quat_rotate_vector([0, 1, 0]);
     const right = forward.cross(up);
 
-	if (g.web.key.is_pressed('w')) { game.cam.position = game.cam.position.add(forward.mul(-dt)); }
-    if (g.web.key.is_pressed('s')) { game.cam.position = game.cam.position.add(forward.mul(dt)); }
-    if (g.web.key.is_pressed('a')) { game.cam.position = game.cam.position.add(right.mul(dt)); }
-    if (g.web.key.is_pressed('d')) { game.cam.position = game.cam.position.add(right.mul(-dt)); }
+	if (g.web.key.is_pressed('w')) { game.player.position = game.player.position.add(forward.mul(dt)); }
+    if (g.web.key.is_pressed('s')) { game.player.position = game.player.position.add(forward.mul(-dt)); }
+    if (g.web.key.is_pressed('a')) { game.player.position = game.player.position.add(right.mul(dt)); }
+    if (g.web.key.is_pressed('d')) { game.player.position = game.player.position.add(right.mul(-dt)); }
 
-    game.cam.view(game.cam.position.sub(forward), forward, up);
+    if (g.web.key.is_pressed('q')) { game.player.q = game.player.q.quat_mul([].quat_rotation([0, 0, 1], dt)); }
+    if (g.web.key.is_pressed('e')) { game.player.q = game.player.q.quat_mul([].quat_rotation([0, 0, 1], -dt)); }
+
+
+    update_camera(game.cam, game.player, 8, dt);
     // cam.view(cam.position, ([0, 0, 1]), ([0, 1, 0]));
 
     game.t += dt;
 });
 
+function update_camera(camera, player, dist, dt)
+{
+    const q = player.q;//.quat_inverse();
+    const forward = q.quat_rotate_vector([0, 0, 1]);
+    var up = q.quat_rotate_vector([0, 1, 0]);
+
+
+    camera.look_at(player.position.add(forward.mul(-dist)), player.position, up);
+
+
+    // camera.look_at([0, 0, -5], player.position, [0,1,0]);
+}
 
 function draw_skybox()
 {
@@ -103,6 +131,20 @@ function draw_skybox()
     gl.enable(gl.DEPTH_TEST);
 }
 
+function draw_player(player)
+{
+    // const model = [].translate(player.position).mat_mul(player.q.quat_inverse().quat_to_matrix());
+    const model = player.q.quat_inverse().quat_to_matrix().mat_mul([].translate(player.position));
+    // const model = [].I(4);
+
+    player.mesh.using_shader('basic_textured')
+               .with_attribute({name:'a_position', buffer: 'positions', components: 3})
+               .with_attribute({name:'a_tex_coord', buffer: 'texture_coords', components: 2})
+               .with_camera(game.cam)
+               .set_uniform('u_model').mat4(model)
+               .set_uniform('u_texture').texture(player.texture)
+               .draw_tris();
+}
 
 g.web.draw(function (dt)
 {
@@ -110,9 +152,18 @@ g.web.draw(function (dt)
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    game.cam.perspective(Math.PI / 4, 0.1, 1000);
+    game.cam.perspective(Math.PI / 3, 0.1, 1000);
 
     draw_skybox();
+
+    draw_player(game.player);
+
+    draw_player({
+        mesh: g.web.assets['mesh/cube'],
+        texture: g.web.assets['tex/test'],
+        position: [0, 0, 10],
+        q: [0, 0, 0, 1]
+    });
 });
 
 g.start();
