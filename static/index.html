@@ -78,7 +78,6 @@ g.web.pointer.on_move(function (event)
     const dqy = [].quat_rotation([1, 0, 0], event.movementY * k.mouse.sensitivity);
     const dq = dqx.quat_mul(dqy)
     game.player.q = game.player.q.quat_mul(dq);
-    // console.log([event.movementX, event.movementY]);s
 });
 
 

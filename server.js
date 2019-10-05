@@ -41,6 +41,12 @@ io.on('connection', function(player) {
 const dt = 1 / 30;
 setInterval(function() {
 	game.server.update(dt);
+
+	for (var player_key in game.server.players)
+	{
+		var player = game.server.players[player_key];
+		game.server.player.update(player, dt);
+	}
 }, dt * 1000);
 
 // express setup

@@ -9,15 +9,23 @@ module.exports.server = {
 	player: {
 		connected: function(player)
 		{
+			player.position = [0, 0, 0];
+            player.q = [0, 0, 0, 1];
+            player.velocity = [0, 0, 0];
+            player.forward = function() { game.player.q.quat_rotate_vector([0, 0, 1]); }
+            player.up = function() { game.player.q.quat_rotate_vector([0, 1, 0]); }
+            player.right = function() { game.player.q.quat_rotate_vector([1, 0, 0]); }
+
 			console.log('player: ' + player.id + ' connected');
 		},
 		on_message: function(player, message)
 		{
 			console.log('player: ' + player.id + ' on_message');
 		},
-		update: function(player)
+		update: function(player, dt)
 		{
-			console.log('player: ' + player.id + ' tick');
+			player.position = player.position.add(player.velocity);
+
 		},
 		disconnected: function(player)
 		{
@@ -27,8 +35,6 @@ module.exports.server = {
 	// main game loop
 	update: function(dt)
 	{
-		const child_process = require("child_process");
-		// Sleep for 5 seconds
-		child_process.execSync("sleep 1");
+
 	}
 };
