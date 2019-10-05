@@ -10,12 +10,13 @@ module.exports.server = {
 		connected: function(player)
 		{
 			player.state = {
-				mesh: 'mesh/player-1',
-				texture: 'tex/player-1',
+				mesh: 'mesh/player-0',
+				texture: 'tex/player-0',
 				position: [0, 0, 0],
                 q:        [0, 0, 0, 1],
                 velocity: [0, 0, 0],
-                thrust:   [0, 0, 0]
+                thrust:   [0, 0, 0],
+                roll: 0
             };
 
             player.forward = function() { return player.state.q.quat_rotate_vector([0, 0, 1]); }
@@ -33,6 +34,9 @@ module.exports.server = {
 					break;
 				case 'ori':
 					player.state.q = message.q;
+					break;
+				case 'roll':
+					player.state.roll = message.roll;
 					break;
 
 			}
@@ -57,6 +61,8 @@ module.exports.server = {
 		{
 			var player = this.players[player_key];
 
+			player.state.q = player.state.q.quat_mul([].quat_rotation([0, 0, 1], player.state.roll * dt));
+
 			// create a summed thrust vector
 			const t = player.state.thrust;
 			const r_acc = player.right().mul(t[0]);
@@ -66,6 +72,8 @@ module.exports.server = {
 
 			// accelerate player
 			player.state.velocity = player.state.velocity.add(acc.mul(dt));
+
+			player.state.velocity = player.state.velocity.mul(1 - dt);
 
 			player.state.position = player.state.position.add(player.state.velocity);
 			this.player.update(player, dt);

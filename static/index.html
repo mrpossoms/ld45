@@ -65,7 +65,7 @@ g.initialize(function ()
                                                      .create(g.web.assets["imgs/stars.jpg"]);
         g.web.assets['tex/player-0'] = g.web.gfx.texture.repeating()
                                                      .pixelated()
-                                                     .create(g.web.assets["imgs/player-0.png"]);                                                     
+                                                     .create(g.web.assets["imgs/player-0.png"]);
 
         g.web.assets['tex/player-1'] = g.web.gfx.texture.repeating()
                                                         .pixelated()
@@ -124,6 +124,7 @@ g.update(function (dt)
     // const right = forward.cross(up);
 
     var thrust = [0, 0, 0];
+    var roll = 0;
 	if (g.web.key.is_pressed('w')) { thrust = thrust.add([0, 0, 1]); }
     if (g.web.key.is_pressed('s')) { thrust = thrust.add([0, 0, -1]); }
     if (g.web.key.is_pressed('a')) { thrust = thrust.add([-1, 0, 0]); }
@@ -132,8 +133,14 @@ g.update(function (dt)
     if (g.web.key.is_pressed('Shift')) { thrust = thrust.add([0, 1, 0]); }
 
     var me = game.state.players[game.my_id]
-    if (g.web.key.is_pressed('q')) { me.q = me.q.quat_mul([].quat_rotation([0, 0, 1], dt)); }
-    if (g.web.key.is_pressed('e')) { me.q = me.q.quat_mul([].quat_rotation([0, 0, 1], -dt)); }
+    if (g.web.key.is_pressed('q')) { roll = -1; }
+    if (g.web.key.is_pressed('e')) { roll = 1; }
+
+    if (roll != me.roll)
+    {
+        me.roll = roll;
+        g.web.socket().send({topic:'roll', roll: me.roll});
+    }
 
     if (thrust.sub(me.thrust).len() > 0)
     {
