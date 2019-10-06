@@ -10,9 +10,12 @@ function on_load()
 const asset_list = [
     'shaders/basic_textured.vert',
     'shaders/basic_textured.frag',
+    'shaders/foggy_textured.frag',
+    'shaders/safety_ind.vert',
+    'shaders/safety_ind.frag',
     'imgs/stars.jpg',
     'imgs/test.png',
-    'imgs/moon.png',
+    'imgs/moon.jpg',
     'imgs/player-0.png',
     'imgs/player-1.png',
     'imgs/debris-0.png',
@@ -73,6 +76,17 @@ g.initialize(function ()
             g.web.assets['shaders/basic_textured.frag']
         );
 
+        g.web.gfx.shader.create('foggy_textured',
+            g.web.assets['shaders/basic_textured.vert'],
+            g.web.assets['shaders/foggy_textured.frag']
+        );
+
+        g.web.gfx.shader.create('safety_ind',
+            g.web.assets['shaders/safety_ind.vert'],
+            g.web.assets['shaders/safety_ind.frag']
+        );
+
+
         g.web.assets['mesh/cube'] = g.web.gfx.mesh.create(g.web.assets['meshes/exported-cube.json']);
         g.web.assets['mesh/player-1'] = g.web.gfx.mesh.create(g.web.assets['meshes/player-1.json']);
         g.web.assets['mesh/player-0'] = g.web.gfx.mesh.create(g.web.assets['meshes/player-0.json']);
@@ -104,13 +118,8 @@ g.initialize(function ()
                                                      .create(g.web.assets["imgs/test.png"]);
         g.is_running = true;
 
-        // me = {
-        //     mesh: g.web.assets['mesh/cube'],
-        //     texture: g.web.assets['tex/test'],
-        //     position: [0, 0, 0],
-        //     thrust: [0, 0, 0],
-        //     q: [0, 0, 0, 1]
-        // };
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     });
 
 	return true;
@@ -145,8 +154,11 @@ g.web.on_message(function (msg)
     {
         case 'state':
             game.state.target = msg.state;
-            if (Object.keys(game.state.display).length != Object.keys(game.state.target).length ||
-                Object.keys(game.state.display.players).length != Object.keys(game.state.target.players).length)
+            if (
+                Object.keys(game.state.display).length != Object.keys(game.state.target).length ||
+                Object.keys(game.state.display.players).length != Object.keys(game.state.target.players).length ||
+                game.state.display.debris.length != game.state.target.debris.length
+                )
             {
                 game.state.display = game.state.target;
             }
@@ -198,15 +210,36 @@ g.update(function (dt)
         disp.players[key].q = targ.players[key].q;
     }
 
-    for(var i = disp.asteroids.length; i--;)
+    for(var i = disp.debris.length; i--;)
     {
-        disp.asteroids[i].position = disp.asteroids[i].position.lerp(targ.asteroids[i].position, dt * 10);
+        disp.debris[i].position = disp.debris[i].position.lerp(targ.debris[i].position, dt * 10);
     }
 
     update_camera(game.cam, game.state.display.players[game.my_id], 2, dt);
 
     game.t += dt;
 });
+
+function nearest_debris(debris, position)
+{
+    var nearest = debris[0];
+    const delta = nearest.position.sub(position);
+    var nearest_dist = delta.dot(delta);
+
+    for (var i = 1; i < debris.length; ++i)
+    {
+        const delta = debris[i].position.sub(position);
+        const dist = delta.dot(delta);
+
+        if (dist < nearest_dist)
+        {
+            nearest_dist = dist;
+            nearest = debris[i];
+        }
+    }
+
+    return nearest;
+}
 
 function update_camera(camera, player, dist, dt)
 {
@@ -245,7 +278,7 @@ function draw_moon()
     const model = s.mat_mul(q.quat_to_matrix());
     const mesh = g.web.assets['mesh/moon'];
 
-    mesh.using_shader('basic_textured')
+    mesh.using_shader('foggy_textured')
         .with_attribute({name:'a_position', buffer: 'positions', components: 3})
         .with_attribute({name:'a_tex_coord', buffer: 'texture_coords', components: 2})
         .with_camera(game.cam)
@@ -254,13 +287,47 @@ function draw_moon()
         .draw_tris();
 }
 
+
+function draw_safety_indicator(player, debris)
+{
+    const nearest = nearest_debris(debris, player.position);
+
+    var mesh = g.web.assets['mesh/safety_ind'];
+
+    if (!mesh)
+    {
+        mesh = g.web.gfx.mesh.create();
+        mesh.vertices = {
+                positions: gl.createBuffer(),
+                colors: gl.createBuffer()
+        };
+
+        g.web.assets['mesh/safety_ind'] = mesh;
+    }
+
+    const mid = player.position.add(nearest.position).mul(0.5);
+    mesh.positions = player.position.concat(mid, mid, nearest.position).mul(-1);
+    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertices.positions);
+    gl.bufferData(gl.ARRAY_BUFFER, mesh.positions.as_Float32Array(), gl.DYNAMIC_DRAW);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertices.colors);
+    gl.bufferData(gl.ARRAY_BUFFER, [0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0].as_Float32Array(), gl.DYNAMIC_DRAW);
+
+    mesh.using_shader('safety_ind')
+        .with_attribute({name:'a_position', buffer: 'positions', components: 3})
+        .with_attribute({name:'a_color', buffer: 'colors', components: 4})
+        .with_camera(game.cam)
+        .draw_lines();
+}
+
+
 function draw_player(player)
 {
     // const model = [].translate(player.position).mat_mul(player.q.quat_inverse().quat_to_matrix());
     const model = player.q.quat_inverse().quat_to_matrix().mat_mul([].translate(player.position));
     const mesh = g.web.assets[player.mesh];
 
-    mesh.using_shader('basic_textured')
+    mesh.using_shader('foggy_textured')
         .with_attribute({name:'a_position', buffer: 'positions', components: 3})
         .with_attribute({name:'a_tex_coord', buffer: 'texture_coords', components: 2})
         .with_camera(game.cam)
@@ -270,23 +337,23 @@ function draw_player(player)
 }
 
 
-function draw_asteroids(asteroids)
+function draw_debris(debris)
 {
     const mesh = g.web.assets['mesh/debris-0'];
     const tex = g.web.assets['tex/debris-0'];
 
-    mesh.using_shader('basic_textured')
+    mesh.using_shader('foggy_textured')
     .with_attribute({name:'a_position', buffer: 'positions', components: 3})
     .with_attribute({name:'a_tex_coord', buffer: 'texture_coords', components: 2})
     .with_camera(game.cam);
 
-    for (var i = asteroids.length; i--;)
+    for (var i = debris.length; i--;)
     {
         const q = [].quat_rotation(lut.axis[i % lut.axis.length], game.t);
-        const s = [].scale(asteroids[i].mass);
-        const model = s.mat_mul(q.quat_to_matrix()).mat_mul([].translate(asteroids[i].position));
+        const s = [].scale(debris[i].mass);
+        const model = s.mat_mul(q.quat_to_matrix()).mat_mul([].translate(debris[i].position));
 
-        mesh.using_shader('basic_textured')
+        mesh.using_shader('foggy_textured')
         .set_uniform('u_model').mat4(model)
         .set_uniform('u_texture').texture(tex)
         .draw_tris();
@@ -310,14 +377,12 @@ g.web.draw(function (dt)
         draw_player(game.state.display.players[player_id]);
     }
 
-    draw_asteroids(game.state.display.asteroids);
+    draw_debris(game.state.display.debris);
 
-    draw_player({
-        mesh: 'mesh/player-1',
-        texture: 'tex/player-1',
-        position: [0, 0, 10],
-        q: [0, 0, 0, 1]
-    });
+    draw_safety_indicator(
+        game.state.display.players[game.my_id],
+        game.state.display.debris
+    );
 });
 
 g.start();

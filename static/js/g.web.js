@@ -283,12 +283,31 @@ g.web = {
                                 }
                                 else
                                 {
-                                    gl.drawArrays(gl.TRIANGLES, 0, mesh_ref.positions.length);
+                                    gl.drawArrays(gl.TRIANGLES, 0, mesh_ref.positions.length / 9);
+                                }
+                            },
+                            draw_lines: function()
+                            {
+                                if (mesh_ref.indices)
+                                {
+                                    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh_ref.indices);
+                                    gl.drawElements(
+                                        gl.LINES,
+                                        mesh_ref.element_count,
+                                        gl.UNSIGNED_SHORT,
+                                        0
+                                    );
+                                }
+                                else
+                                {
+                                    gl.drawArrays(gl.LINES, 0, mesh_ref.positions.length / 3);
                                 }
                             }
                         };
                     }
                 };
+
+                if (!mesh_json) { return mesh; }
 
                 if (mesh_json.positions)
                 {
