@@ -556,7 +556,7 @@ Math.ray = function(ray)
 					t = s + q;
 				}
 
-				return ray.position + ray.direction * t;
+				return ray.position.add(ray.direction.mul(t));
 			}
 		}
 	};
