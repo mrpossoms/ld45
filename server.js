@@ -18,6 +18,8 @@ function new_player_id()
 	return id;
 }
 
+game.server.setup(100);
+
 // socket io setup
 io.on('connection', function(player) {
 	var player_id = new_player_id();
