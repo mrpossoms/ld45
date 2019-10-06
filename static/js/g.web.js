@@ -123,7 +123,6 @@ g.web = {
             create: function(img)
             {
                 const tex = gl.createTexture();
-
                 const wrap = g.web.gfx.texture._wraping;
                 const filter = g.web.gfx.texture._filtering;
 
@@ -500,12 +499,12 @@ g.web = {
 			{
 				document.onkeydown = function(key)
 				{
-					g.web.key._map[key.key] = true;
+					g.web.key._map[key.key.toLowerCase()] = true;
 				};
 
 				document.onkeyup = function(key)
 				{
-					g.web.key._map[key.key] = false;
+					g.web.key._map[key.key.toLowerCase()] = false;
 				};
 
 				g.web.key._initalized = true;
