@@ -277,7 +277,7 @@ function draw_moon()
     // const model = [].translate(player.position).mat_mul(player.q.quat_inverse().quat_to_matrix());
     const q = [].quat_rotation([0, 1, 0], game.t / 10);
     const s = [].scale(10);
-    const model = s.mat_mul(q.quat_to_matrix());
+    const model = s;//s.mat_mul(q.quat_to_matrix());
     const mesh = g.web.assets['mesh/moon'];
 
     mesh.using_shader('foggy_textured')
@@ -317,7 +317,13 @@ function draw_safety_indicator(player, debris)
 
     const green = [0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0];
     const red = [1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0];
-    const color = green.lerp(red, Math.min(1, rel_speed / 0.3));
+    var color = green.lerp(red, Math.min(1, rel_speed / 0.3));
+
+    if (rel_speed > 0.3)
+    {
+        color = color.add([ 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1 ]);
+    }
+
     gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertices.colors);
     gl.bufferData(gl.ARRAY_BUFFER, color.as_Float32Array(), gl.DYNAMIC_DRAW);
 
