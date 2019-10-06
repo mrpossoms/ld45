@@ -2,7 +2,8 @@ const g = require("./static/js/g.js");
 
 const k = {
 	moon: {
-		mass: 1
+		mass: 1,
+    radius: 30
 	}
 };
 
@@ -27,7 +28,7 @@ function debris_cleanup(debris)
   for (var i = 0; i < debris.length; i++)
   {
     var a = debris[i];
-    if (a.position.len() > 20)
+    if (a.position.len() > k.moon.radius)
     {
       list.push(a);
     }
@@ -83,16 +84,16 @@ module.exports.server = {
   // handlers for all player connection events
   player: {
     connected: function(player) {
+      const r = Math.random() + 50;
+      const t = Math.random() * Math.PI * 2;
+      const p = [ Math.cos(t) * r, Math.random() * 10 - 5, Math.sin(t) * r ];
+      const v = tangent(p, [0, 0, 0]).mul(Math.sqrt(k.moon.mass / r));
       player.state = {
         mesh: "mesh/player-0",
         texture: "tex/player-0",
-        position: [
-          Math.random() * 101 - 50,
-          Math.random() * 10 - 5,
-          Math.random() * 101 - 50
-        ],
+        position: p,
         q: [0, 0, 0, 1],
-        velocity: [0, 0, 0],
+        velocity: v,
         thrust: [0, 0, 0],
         roll: 0
       };
@@ -147,7 +148,7 @@ module.exports.server = {
       const r_acc = player.right().mul(t[0]);
       const u_acc = player.up().mul(t[1]);
       const f_acc = player.forward().mul(t[2]);
-      const acc = r_acc.add(u_acc).add(f_acc);
+      const acc = r_acc.add(u_acc).add(f_acc).mul(0.1);
 
       // player debris collision
       for (var i = 0; i < this.state.debris.length; i++)
@@ -165,10 +166,11 @@ module.exports.server = {
       }
 
       // accelerate player
-      player.state.velocity = player.state.velocity.add(acc.mul(dt));
+      grav = gravitational_force(player.state.position, [0, 0, 0], k.moon.mass);
+      player.state.velocity = player.state.velocity.add(acc.mul(dt)).add(grav);
 
       // apply drag to the player
-      player.state.velocity = player.state.velocity.mul(1 - dt);
+      // player.state.velocity = player.state.velocity.mul(1 - dt);
 
       player.state.position = player.state.position.add(player.state.velocity);
       this.player.update(player, dt);

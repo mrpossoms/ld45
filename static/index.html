@@ -120,6 +120,7 @@ g.initialize(function ()
 
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        gl.lineWidth(10);
     });
 
 	return true;
@@ -183,7 +184,7 @@ g.update(function (dt)
     if (g.web.key.is_pressed('a')) { thrust = thrust.add([-1, 0, 0]); }
     if (g.web.key.is_pressed('d')) { thrust = thrust.add([1, 0, 0]); }
     if (g.web.key.is_pressed(' ')) { thrust = thrust.add([0,-1, 0]); }
-    if (g.web.key.is_pressed('Shift')) { thrust = thrust.add([0, 1, 0]); }
+    if (g.web.key.is_pressed('shift')) { thrust = thrust.add([0, 1, 0]); }
 
     var me = game.state.target.players[game.my_id]
     if (g.web.key.is_pressed('q')) { roll = -1; }
@@ -207,6 +208,7 @@ g.update(function (dt)
     for(var key in disp.players)
     {
         disp.players[key].position = disp.players[key].position.lerp(targ.players[key].position, dt * 10);
+        disp.players[key].velocity = targ.players[key].velocity;
         disp.players[key].q = targ.players[key].q;
     }
 
@@ -247,7 +249,7 @@ function update_camera(camera, player, dist, dt)
     const forward = q.quat_rotate_vector([0, 0, 1]);
     var up = q.quat_rotate_vector([0, 1, 0]);
 
-    camera.position = camera.position.lerp(player.position.add(forward.mul(-dist)), dt * k.camera.snap);
+    camera.position = camera.position.lerp(player.position.add(forward.mul(-dist).sub(up)), dt * k.camera.snap);
     camera.up = camera.up.lerp(up, dt * k.camera.snap);
 
 
@@ -275,7 +277,7 @@ function draw_moon()
     // const model = [].translate(player.position).mat_mul(player.q.quat_inverse().quat_to_matrix());
     const q = [].quat_rotation([0, 1, 0], game.t / 10);
     const s = [].scale(10);
-    const model = s.mat_mul(q.quat_to_matrix());
+    const model = s;//s.mat_mul(q.quat_to_matrix());
     const mesh = g.web.assets['mesh/moon'];
 
     mesh.using_shader('foggy_textured')
@@ -291,6 +293,9 @@ function draw_moon()
 function draw_safety_indicator(player, debris)
 {
     const nearest = nearest_debris(debris, player.position);
+    const rel_speed = player.velocity.sub(nearest.velocity).len();
+
+    console.log(rel_speed);
 
     var mesh = g.web.assets['mesh/safety_ind'];
 
@@ -310,8 +315,17 @@ function draw_safety_indicator(player, debris)
     gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertices.positions);
     gl.bufferData(gl.ARRAY_BUFFER, mesh.positions.as_Float32Array(), gl.DYNAMIC_DRAW);
 
+    const green = [0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0];
+    const red = [1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0];
+    var color = green.lerp(red, Math.min(1, rel_speed / 0.3));
+
+    if (rel_speed > 0.3)
+    {
+        color = color.add([ 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1 ]);
+    }
+
     gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertices.colors);
-    gl.bufferData(gl.ARRAY_BUFFER, [0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0].as_Float32Array(), gl.DYNAMIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, color.as_Float32Array(), gl.DYNAMIC_DRAW);
 
     mesh.using_shader('safety_ind')
         .with_attribute({name:'a_position', buffer: 'positions', components: 3})
