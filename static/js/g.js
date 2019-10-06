@@ -137,6 +137,34 @@ Array.prototype.mul = function(v)
 	return w;
 };
 
+Array.prototype.pow = function(ex)
+{
+	var w = new Array(this.length);
+
+	if (typeof ex === 'number')
+	{
+		if (this.is_matrix())
+		{
+			const dims = this.mat_dims();
+			for (var r = dims[0]; r--;)
+			{
+				w[r] = new Array(dims[1]);
+				for (var c = dims[1]; c--;)
+				{
+					w[r][c] = Math.pow(this[r][c], ex);
+				}
+			}
+		}
+		else
+		{
+			for (var i = this.length; i--;) w[i] = Math.pow(this[i], ex);
+		}
+	}
+	else if (v.constructor === Array && typeof ex[0] === 'number') { for (var i = this.length; i--;) w[i] = Math.pow(this[i], ex[i]); }
+
+	return w;
+};
+
 Array.prototype.div = function(v)
 {
 	var r = new Array(this.length);
@@ -340,6 +368,11 @@ Array.prototype.matrix = function()
 	else { return [this].transpose(); }
 };
 
+Array.prototype.random_unit = function()
+{
+	return [Math.random(), Math.random(), Math.random()].sub([0.5, 0.5, 0.5]).norm();
+}
+
 Array.prototype.I = function(dim)
 {
 	var M = this.new_matrix(dim, dim);
@@ -451,6 +484,14 @@ Array.prototype.rotation = function(axis, angle)
 		[                   0,                    0,                    0, 1]
 	];
 };
+
+
+Array.prototype.scale = function(s)
+{
+	var m = [].I(4).mul(s);
+	m[3][3] = 1;
+	return m;
+}
 
 
 Array.prototype.quat_rotation = function(axis, angle)

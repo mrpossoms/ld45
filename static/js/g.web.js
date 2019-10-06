@@ -463,7 +463,10 @@ g.web = {
 
 		on_press: function(on_press_func)
 		{
-			return this;
+			g.web._canvas.onclick = function()
+            {
+                on_press_func();
+            };
 		}
 	},
 

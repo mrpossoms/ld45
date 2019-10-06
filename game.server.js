@@ -1,5 +1,61 @@
 const g = require("./static/js/g.js");
 
+const k = {
+	moon: {
+		mass: 1
+	}
+};
+
+function tangent(position, body_position)
+{
+	const r = body_position.sub(position);
+	return r.cross([0, 1, 0]).norm();
+}
+
+function gravitational_force(position, body_position, body_mass)
+{
+	const m = body_mass;
+	const r = body_position.sub(position);
+	const r_2 = r.dot(r);
+	return r.norm().mul(m / r_2);
+}
+
+
+function asteroid_dynamics(asteroids, dt)
+{
+	for (var i = 0; i < asteroids.length; i++)
+	{
+		var a = asteroids[i];
+		var previousPosition = a.position;
+		var velocity;
+
+		if (!a.captured)
+		{
+			var force = gravitational_force(a.position, [0, 0, 0], k.moon.mass);
+			const do_n_body = false;
+			for (var j = 0; do_n_body && j < asteroids.length; j++)
+			{
+				if (j == i) { continue; }
+				const b = asteroids[j];
+				const grav = gravitational_force(a.position, b.position, b.mass);
+
+				force = force.add();
+			}
+
+			a.velocity = a.velocity.add(force);
+			a.position = a.position.add(a.velocity);
+		}
+		else
+		{
+			// For captured as
+			var player = a.player;
+			a.position = player.state.position.add(player.forward());
+			velocity = player.state.velocity;
+		}
+		// TODO: Add ray code with previous position and velocity and asteroid player to check if they scored
+	}
+}
+
 module.exports.server = {
   // map of all connected players
   players: {},
@@ -79,6 +135,7 @@ module.exports.server = {
       // accelerate player
       player.state.velocity = player.state.velocity.add(acc.mul(dt));
 
+      // apply drag to the player
       player.state.velocity = player.state.velocity.mul(1 - dt);
 
       player.state.position = player.state.position.add(player.state.velocity);
@@ -116,24 +173,7 @@ module.exports.server = {
     }
 
     // update position of asteroids and if they would go through the gate
-    for (var i = 0; i < this.state.asteroids.length; i++) {
-      var previousPosition = this.state.asteroids[i].position;
-      var velocity;
-      if (!this.state.asteroids[i].captured) {
-        this.state.asteroids[i].position = this.state.asteroids[i].position.add(
-          this.state.asteroids[i].velocity
-        );
-        velocity = this.state.asteroids[i].velocity;
-      } else {
-        // For captured asteroids
-        var player = this.state.asteroids[i].player;
-        this.state.asteroids[i].position = player.state.position.add(
-          player.forward()
-        );
-        velocity = player.state.velocity;
-      }
-      // TODO: Add ray code with previous position and velocity and asteroid player to check if they scored
-    }
+    asteroid_dynamics(this.state.asteroids, dt);
 
     // send states to all players
     for (var player_key in this.players) {
@@ -146,18 +186,15 @@ module.exports.server = {
   setup: function(asteroidCount) {
     this.state.gate = { position: [0, 0, 0] };
     for (var i = 0; i < asteroidCount; i++) {
+      const r = Math.random() * 50 + 50;
+      const t = Math.random() * Math.PI * 2;
+      const p = [ Math.cos(t) * r, Math.random() * 10 - 5, Math.sin(t) * r ];
+      const v = tangent(p, [0, 0, 0]).mul(Math.sqrt(k.moon.mass / r));
       var asteroid = {
         level: 0,
-        position: [
-          Math.random() * 501 - 250,
-          Math.random() * 50 - 25,
-          Math.random() * 501 - 250
-        ],
-        velocity: [
-          Math.random(0, 0.66) - 0.33,
-          Math.random(0, 0.66) - 0.33,
-          Math.random(0, 0.66) - 0.33
-        ]
+        mass: 0.25 + Math.random(),
+        position: p,
+        velocity: v
       };
       this.state.asteroids.push(asteroid);
     }
