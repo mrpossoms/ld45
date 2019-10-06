@@ -14,10 +14,12 @@ const asset_list = [
     'imgs/test.png',
     'imgs/player-0.png',
     'imgs/player-1.png',
+    'imgs/debris-0.png',
     'meshes/plane.json',
     'meshes/exported-cube.json',
     'meshes/player-1.json',
-    'meshes/player-0.json'
+    'meshes/player-0.json',
+    'meshes/debris-0.json'
 ];
 
 const k = {
@@ -62,6 +64,8 @@ g.initialize(function ()
         g.web.assets['mesh/cube'] = g.web.gfx.mesh.create(g.web.assets['meshes/exported-cube.json']);
         g.web.assets['mesh/player-1'] = g.web.gfx.mesh.create(g.web.assets['meshes/player-1.json']);
         g.web.assets['mesh/player-0'] = g.web.gfx.mesh.create(g.web.assets['meshes/player-0.json']);
+        g.web.assets['mesh/debris-0'] = g.web.gfx.mesh.create(g.web.assets['meshes/debris-0.json']);
+
 
         g.web.assets['tex/stars'] = g.web.gfx.texture.repeating()
                                                      .pixelated()
@@ -73,6 +77,10 @@ g.initialize(function ()
         g.web.assets['tex/player-1'] = g.web.gfx.texture.repeating()
                                                         .pixelated()
                                                         .create(g.web.assets["imgs/player-1.png"]);
+
+        g.web.assets['tex/debris-0'] = g.web.gfx.texture.repeating()
+                                                     .pixelated()
+                                                     .create(g.web.assets["imgs/debris-0.png"]);
 
         g.web.assets['tex/test'] = g.web.gfx.texture.repeating()
                                                      .pixelated()
@@ -218,6 +226,21 @@ function draw_player(player)
         .draw_tris();
 }
 
+function draw_asteroid(asteroid)
+{
+    // const model = [].translate(player.position).mat_mul(player.q.quat_inverse().quat_to_matrix());
+    const model = [].translate(asteroid.position);
+    const mesh = g.web.assets['mesh/debris-0'];
+
+    mesh.using_shader('basic_textured')
+        .with_attribute({name:'a_position', buffer: 'positions', components: 3})
+        .with_attribute({name:'a_tex_coord', buffer: 'texture_coords', components: 2})
+        .with_camera(game.cam)
+        .set_uniform('u_model').mat4(model)
+        .set_uniform('u_texture').texture(g.web.assets['tex/debris-0'])
+        .draw_tris();
+}
+
 g.web.draw(function (dt)
 {
     if (g.is_running == false) { return; }
@@ -231,6 +254,11 @@ g.web.draw(function (dt)
     for (const player_id in game.state.display.players)
     {
         draw_player(game.state.display.players[player_id]);
+    }
+
+    for (var i = game.state.target.asteroids.length; i--;)
+    {
+        draw_asteroid(game.state.target.asteroids[i].state);
     }
 
     draw_player({
