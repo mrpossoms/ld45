@@ -15,7 +15,7 @@ const asset_list = [
     'shaders/safety_ind.frag',
     'imgs/stars.jpg',
     'imgs/test.png',
-    'imgs/moon.png',
+    'imgs/moon.jpg',
     'imgs/player-0.png',
     'imgs/player-1.png',
     'imgs/debris-0.png',
@@ -118,13 +118,8 @@ g.initialize(function ()
                                                      .create(g.web.assets["imgs/test.png"]);
         g.is_running = true;
 
-        // me = {
-        //     mesh: g.web.assets['mesh/cube'],
-        //     texture: g.web.assets['tex/test'],
-        //     position: [0, 0, 0],
-        //     thrust: [0, 0, 0],
-        //     q: [0, 0, 0, 1]
-        // };
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     });
 
 	return true;
@@ -310,16 +305,17 @@ function draw_safety_indicator(player, debris)
         g.web.assets['mesh/safety_ind'] = mesh;
     }
 
-    mesh.positions = player.position.concat(nearest.position).mul(-1);
+    const mid = player.position.add(nearest.position).mul(0.5);
+    mesh.positions = player.position.concat(mid, mid, nearest.position).mul(-1);
     gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertices.positions);
     gl.bufferData(gl.ARRAY_BUFFER, mesh.positions.as_Float32Array(), gl.DYNAMIC_DRAW);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertices.colors);
-    gl.bufferData(gl.ARRAY_BUFFER, [0, 1, 0, 0, 1, 0].as_Float32Array(), gl.DYNAMIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, [0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0].as_Float32Array(), gl.DYNAMIC_DRAW);
 
     mesh.using_shader('safety_ind')
         .with_attribute({name:'a_position', buffer: 'positions', components: 3})
-        .with_attribute({name:'a_color', buffer: 'colors', components: 3})
+        .with_attribute({name:'a_color', buffer: 'colors', components: 4})
         .with_camera(game.cam)
         .draw_lines();
 }
