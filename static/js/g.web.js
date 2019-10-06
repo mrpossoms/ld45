@@ -127,7 +127,7 @@ g.web = {
                 const wrap = g.web.gfx.texture._wraping;
                 const filter = g.web.gfx.texture._filtering;
 
-                img.onload = function()
+                // img.onload = function()
                 {
                     gl.bindTexture(gl.TEXTURE_2D, tex);
                     gl.texImage2D(
@@ -388,15 +388,23 @@ g.web = {
             }
 
             var promises = [];
-	for (var i = 0; i < asset_arr.length; i++)
-	{
-		promises.push(load_resource(asset_arr[i]));
-	}
-
-            Promise.all(promises).then(function(values)
+        	// for (var i = 0; i < asset_arr.length; i++)
+        	// {
+        	// 	promises.push(load_resource(asset_arr[i]));
+        	// }
+            function load(idx)
             {
-                on_finish();
-            });
+                if (idx >= asset_arr.length) { return this; }
+                return load_resource(asset_arr[idx]).then(function(){
+                    return load(idx + 1);
+                })
+            }
+
+            // Promise.all(promises).then(function(values)
+            // {
+            //     on_finish();
+            // });
+            load(0).then(function(){ on_finish(); })
 		},
 	},
 
