@@ -14,9 +14,9 @@ module.exports.server = {
         mesh: "mesh/player-0",
         texture: "tex/player-0",
         position: [
-          Math.random() * 101,
-          Math.random() * 10,
-          Math.random() * 101
+          Math.random() * 101 - 50,
+          Math.random() * 10 - 5,
+          Math.random() * 101 - 50
         ],
         q: [0, 0, 0, 1],
         velocity: [0, 0, 0],
@@ -61,15 +61,6 @@ module.exports.server = {
   update: function(dt) {
     this.state.players = {};
 
-    // update position of asteroids that already exist
-    for (var i = 0; i < this.state.asteroids.length; i++) {
-      if (!this.state.asteroids[i].state.captured) {
-        this.state.asteroids[i].state.position = this.state.asteroids[
-          i
-        ].state.position.add(this.state.asteroids[i].state.velocity);
-      }
-    }
-
     // update all player dynamics
     for (var player_key in this.players) {
       var player = this.players[player_key];
@@ -97,43 +88,51 @@ module.exports.server = {
       if (player.state.action !== undefined) {
         if (player.state.asteroidId !== undefined) {
           // throw asteroid
-          this.state.asteroids[player.state.asteroidId].state.captured = false;
+          this.state.asteroids[player.state.asteroidId].captured = false;
           this.state.asteroids[
             player.state.asteroidId
-          ].state.velocity = player.velocity.add(player.forward().mul(0.33));
-          this.state.asteroids[
-            player.state.asteroidId
-          ].state.position = this.state.asteroids[
-            player.state.asteroidId
-          ].state.position.add(
-            this.state.asteroids[player.state.asteroidId].state.velocity
-          );
+          ].velocity = player.velocity.add(player.forward().mul(0.33));
+          delete player.state.asteroidId;
         } else {
           // grab asteroid
           for (var i = 0; this.state.asteroids; i++) {
             if (
               player.state.position
                 .add(player.forward())
-                .sub(this.state.asteroids[i].state.position)
+                .sub(this.state.asteroids[i].position)
                 .len() <= 1 &&
-              !this.state.asteroids[i].state.captured
+              !this.state.asteroids[i].captured
             ) {
-              player.state.asteroid = i;
-              this.state.asteroids[i].state.captured = true;
+              player.state.asteroidId = i;
+              this.state.asteroids[i].captured = true;
+              this.state.asteroids[i].player = player;
             }
           }
         }
       }
       delete player.action;
 
-      // update position of captured asteroid as forward of player
-      if (player.state.asteroidId != null) {
-        this.state.asteroids[
-          player.state.asteroidId
-        ].state.position = player.state.position.add(player.forward());
-      }
-
       this.state.players[player_key] = player.state;
+    }
+
+    // update position of asteroids and if they would go through the gate
+    for (var i = 0; i < this.state.asteroids.length; i++) {
+      var previousPosition = this.state.asteroids[i].position;
+      var velocity;
+      if (!this.state.asteroids[i].captured) {
+        this.state.asteroids[i].position = this.state.asteroids[i].position.add(
+          this.state.asteroids[i].velocity
+        );
+        velocity = this.state.asteroids[i].velocity;
+      } else {
+        // For captured asteroids
+        var player = this.state.asteroids[i].player;
+        this.state.asteroids[i].position = player.state.position.add(
+          player.forward()
+        );
+        velocity = player.state.velocity;
+      }
+      // TODO: Add ray code with previous position and velocity and asteroid player to check if they scored
     }
 
     // send states to all players
@@ -145,21 +144,20 @@ module.exports.server = {
   },
   //initial state
   setup: function(asteroidCount) {
+    this.state.gate = { position: [0, 0, 0] };
     for (var i = 0; i < asteroidCount; i++) {
       var asteroid = {
-        state: {
-          level: 0,
-          position: [
-            Math.random() * 501,
-            Math.random() * 50,
-            Math.random() * 501
-          ],
-          velocity: [
-            Math.random(0, 0.66) - 0.33,
-            Math.random(0, 0.66) - 0.33,
-            Math.random(0, 0.66) - 0.33
-          ]
-        }
+        level: 0,
+        position: [
+          Math.random() * 501 - 250,
+          Math.random() * 50 - 25,
+          Math.random() * 501 - 250
+        ],
+        velocity: [
+          Math.random(0, 0.66) - 0.33,
+          Math.random(0, 0.66) - 0.33,
+          Math.random(0, 0.66) - 0.33
+        ]
       };
       this.state.asteroids.push(asteroid);
     }
