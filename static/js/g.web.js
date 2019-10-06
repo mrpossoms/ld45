@@ -355,6 +355,7 @@ g.web = {
             {
                 return fetch(path).then(function(res)
                 {
+                    console.log('Loading: ' + path);
                     const type = res.headers.get('content-type');
                     const type_stem = type.split('/')[0];
                     var bytes_to_read = parseInt(res.headers.get('content-length'));
@@ -366,11 +367,13 @@ g.web = {
                             var img = new Image();
                             img.src = res.url;
                             g.web.assets[path] = img;
+                            console.log('Finished: ' + path);
                         } break;
 
                         case 'audio':
                         {
                             g.web.assets[path] = new Audio(res.url);
+                            console.log('Finished: ' + path);
                         } break;
                     }
 
@@ -381,15 +384,29 @@ g.web = {
                         case 'application/json; charset=UTF-8':
                         {
                             g.web.assets[path] = '';
-                            return res.body.getReader().read().then(function(res)
-                            {
-                                g.web.assets[path] += (new TextDecoder()).decode(res.value);
-                                bytes_to_read -= res.value.length;
-                                if (res.done || bytes_to_read == 0)
-                                {
-                                    g.web.assets[path] = JSON.parse(g.web.assets[path]);
-                                }
+                            return res.json().then(function (json) {
+                                g.web.assets[path] = json;
+                                console.log('Finished OK: ' + path);
                             });
+                            // return res.body.getReader().read().then(function(res)
+                            // {
+                            //     g.web.assets[path] += (new TextDecoder()).decode(res.value);
+                            //     bytes_to_read -= res.value.length;
+                            //     console.log('Loading: ' + path + ' bytes remaining: ' + bytes_to_read);
+                            //     if (res.done)
+                            //     {
+                            //         if (bytes_to_read == 0)
+                            //         {
+                            //             g.web.assets[path] = JSON.parse(g.web.assets[path]);
+                            //             console.log('Finished OK: ' + path);
+                            //             return true;
+                            //         }
+                            //         else
+                            //         {
+                            //             console.log('Finished Error: ' + path);
+                            //         }
+                            //     }
+                            // });
                         } break;
 
                         case 'text/plain':
@@ -398,6 +415,7 @@ g.web = {
                             g.web.assets[path] = '';
                             return res.body.getReader().read().then(function(res)
                             {
+                                console.log('Loading: ' + path + ' bytes remaining: ' + bytes_to_read);
                                 g.web.assets[path] += (new TextDecoder()).decode(res.value);
                             });
                         } break;

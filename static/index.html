@@ -295,8 +295,6 @@ function draw_safety_indicator(player, debris)
     const nearest = nearest_debris(debris, player.position);
     const rel_speed = player.velocity.sub(nearest.velocity).len();
 
-    console.log(rel_speed);
-
     var mesh = g.web.assets['mesh/safety_ind'];
 
     if (!mesh)
@@ -339,14 +337,14 @@ function draw_player(player)
 {
     // const model = [].translate(player.position).mat_mul(player.q.quat_inverse().quat_to_matrix());
     const model = player.q.quat_inverse().quat_to_matrix().mat_mul([].translate(player.position));
-    const mesh = g.web.assets[player.mesh];
+    const mesh = g.web.assets['mesh/player-0'];
 
     mesh.using_shader('foggy_textured')
         .with_attribute({name:'a_position', buffer: 'positions', components: 3})
         .with_attribute({name:'a_tex_coord', buffer: 'texture_coords', components: 2})
         .with_camera(game.cam)
         .set_uniform('u_model').mat4(model)
-        .set_uniform('u_texture').texture(g.web.assets[player.texture])
+        .set_uniform('u_texture').texture(g.web.assets['tex/player-0'])
         .draw_tris();
 }
 

@@ -37,6 +37,23 @@ function debris_cleanup(debris)
   return list;
 }
 
+function ship_cleanup(ships)
+{
+  var list = [];
+
+  for (var i = 0; i < ships.length; i++)
+  {
+    var a = ships[i];
+    const dist = a.position.len();
+    if (dist > k.moon.radius && dist < 1000);
+    {
+      list.push(a);
+    }
+  }
+
+  return list;
+}
+
 function debris_dynamics(debris, dt)
 {
 	for (var i = 0; i < debris.length; i++)
@@ -74,12 +91,35 @@ function debris_dynamics(debris, dt)
 	}
 }
 
+function spawn_debris(position)
+{
+  const r = position.len();
+  const v = tangent(position, [0, 0, 0]).mul(Math.sqrt(k.moon.mass / r));
+
+  return {
+    level: Math.floor(Math.random() * 10),
+    mass: 0.25 + Math.random(),
+    position: position,
+    velocity: v
+  };
+}
+
+function spawn_ship(position, velocity)
+{
+  return {
+    level: Math.floor(Math.random() * 10),
+    position: position,
+    velocity: velocity
+  };
+}
+
 module.exports.server = {
   // map of all connected players
   players: {},
   // complete game state
   state: {
-    debris: []
+    debris: [],
+    ships: [],
   },
   // handlers for all player connection events
   player: {
@@ -89,8 +129,6 @@ module.exports.server = {
       const p = [ Math.cos(t) * r, Math.random() * 10 - 5, Math.sin(t) * r ];
       const v = tangent(p, [0, 0, 0]).mul(Math.sqrt(k.moon.mass / r));
       player.state = {
-        mesh: "mesh/player-0",
-        texture: "tex/player-0",
         position: p,
         q: [0, 0, 0, 1],
         velocity: v,
@@ -158,7 +196,6 @@ module.exports.server = {
 
         if (player.state.position.sub(d.position).len() < r)
         {
-          console.log(player_key + 'collided with debris ' + i);
           const tmp = player.state.velocity;
           player.state.velocity = d.velocity;
           d.velocity = tmp;
@@ -226,14 +263,7 @@ module.exports.server = {
       const r = Math.random() * 50 + 50;
       const t = Math.random() * Math.PI * 2;
       const p = [ Math.cos(t) * r, Math.random() * 10 - 5, Math.sin(t) * r ];
-      const v = tangent(p, [0, 0, 0]).mul(Math.sqrt(k.moon.mass / r));
-      var debris = {
-        level: 0,
-        mass: 0.25 + Math.random(),
-        position: p,
-        velocity: v
-      };
-      this.state.debris.push(debris);
+      this.state.debris.push(spawn_debris(p));
     }
   }
 };
