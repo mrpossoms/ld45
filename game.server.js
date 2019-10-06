@@ -98,6 +98,16 @@ module.exports.server = {
         if (player.state.asteroidId !== undefined) {
           // throw asteroid
           this.state.asteroids[player.state.asteroidId].state.captured = false;
+          this.state.asteroids[
+            player.state.asteroidId
+          ].state.velocity = player.velocity.add(player.forward().mul(0.33));
+          this.state.asteroids[
+            player.state.asteroidId
+          ].state.position = this.state.asteroids[
+            player.state.asteroidId
+          ].state.position.add(
+            this.state.asteroids[player.state.asteroidId].state.velocity
+          );
         } else {
           // grab asteroid
           for (var i = 0; this.state.asteroids; i++) {
@@ -115,6 +125,13 @@ module.exports.server = {
         }
       }
       delete player.action;
+
+      // update position of captured asteroid as forward of player
+      if (player.state.asteroidId != null) {
+        this.state.asteroids[
+          player.state.asteroidId
+        ].state.position = player.state.position.add(player.forward());
+      }
 
       this.state.players[player_key] = player.state;
     }
