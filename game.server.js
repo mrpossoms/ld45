@@ -14,9 +14,9 @@ module.exports.server = {
         mesh: "mesh/player-0",
         texture: "tex/player-0",
         position: [
-          Math.floor(Math.random() * 101),
-          Math.floor(Math.random() * 101),
-          Math.floor(Math.random() * 101)
+          Math.random() * 101,
+          Math.random() * 10,
+          Math.random() * 101
         ],
         q: [0, 0, 0, 1],
         velocity: [0, 0, 0],
@@ -47,6 +47,9 @@ module.exports.server = {
         case "roll":
           player.state.roll = message.roll;
           break;
+        case "action":
+          player.state.action = true;
+          break;
       }
     },
     update: function(player, dt) {},
@@ -60,9 +63,11 @@ module.exports.server = {
 
     // update position of asteroids that already exist
     for (var i = 0; i < this.state.asteroids.length; i++) {
-      this.state.asteroids[i].position = this.state.asteroids[i].position.add(
-        this.state.asteroids[i].velocity
-      );
+      if (!this.state.asteroids[i].state.captured) {
+        this.state.asteroids[i].state.position = this.state.asteroids[
+          i
+        ].state.position.add(this.state.asteroids[i].state.velocity);
+      }
     }
 
     // update all player dynamics
@@ -88,9 +93,30 @@ module.exports.server = {
       player.state.position = player.state.position.add(player.state.velocity);
       this.player.update(player, dt);
 
-      this.state.players[player_key] = player.state;
+      // update state of asteroid if captured by player
+      if (player.state.action !== undefined) {
+        if (player.state.asteroidId !== undefined) {
+          // throw asteroid
+          this.state.asteroids[player.state.asteroidId].state.captured = false;
+        } else {
+          // grab asteroid
+          for (var i = 0; this.state.asteroids; i++) {
+            if (
+              player.state.position
+                .add(player.forward())
+                .sub(this.state.asteroids[i].state.position)
+                .len() <= 1 &&
+              !this.state.asteroids[i].state.captured
+            ) {
+              player.state.asteroid = i;
+              this.state.asteroids[i].state.captured = true;
+            }
+          }
+        }
+      }
+      delete player.action;
 
-      //update state of asteroid if captured by player
+      this.state.players[player_key] = player.state;
     }
 
     // send states to all players
@@ -107,18 +133,18 @@ module.exports.server = {
         state: {
           level: 0,
           position: [
-            Math.floor(Math.random() * 501),
-            Math.floor(Math.random() * 501),
-            Math.floor(Math.random() * 501)
+            Math.random() * 501,
+            Math.random() * 50,
+            Math.random() * 501
           ],
           velocity: [
-            Math.random(0, 0.33),
-            Math.random(0, 0.33),
-            Math.random(0, 0.33)
+            Math.random(0, 0.66) - 0.33,
+            Math.random(0, 0.66) - 0.33,
+            Math.random(0, 0.66) - 0.33
           ]
         }
       };
-      this.state.asteroids.add(asteroid);
+      this.state.asteroids.push(asteroid);
     }
   }
 };
