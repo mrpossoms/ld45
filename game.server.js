@@ -58,6 +58,13 @@ module.exports.server = {
   update: function(dt) {
     this.state.players = {};
 
+    // update position of asteroids that already exist
+    for (var i = 0; i < this.state.asteroids.length; i++) {
+      this.state.asteroids[i].position = this.state.asteroids[i].position.add(
+        this.state.asteroids[i].velocity
+      );
+    }
+
     // update all player dynamics
     for (var player_key in this.players) {
       var player = this.players[player_key];
@@ -85,11 +92,6 @@ module.exports.server = {
 
       //update state of asteroid if captured by player
     }
-
-    // update position of asteroids that already exist
-    for (var i = 0; i < this.state.asteroids.length; i++) {
-		this.state.asteroids[i].position = this.state.asteroids[i].position.add(this.state.asteroids[i].velocity);
-	}
 
     // send states to all players
     for (var player_key in this.players) {
