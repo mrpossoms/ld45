@@ -34,7 +34,10 @@ var game = {
     t: 0,
     // player: {},
     my_id: 0,
-    state: {}
+    state: {
+        display: {},
+        target: {},
+    }
 };
 
 game.cam.view([0, 0, 0], [0, 0, 0], [0, 1, 0]);
@@ -91,10 +94,12 @@ g.initialize(function ()
 
 g.web.pointer.on_move(function (event)
 {
-    var q = game.state.players[game.my_id].q || [0, 0, 0, 1];
+    if (g.is_running == false) { return; }
+
+    var q = game.state.target.players[game.my_id].q || [0, 0, 0, 1];
 
     const dqx = [].quat_rotation([0, 1, 0], event.movementX * k.mouse.sensitivity);
-    const dqy = [].quat_rotation([1, 0, 0], event.movementY * k.mouse.sensitivity);
+    const dqy = [].quat_rotation([1, 0, 0], -event.movementY * k.mouse.sensitivity);
     const dq = dqx.quat_mul(dqy)
     q = q.quat_mul(dq);
 
@@ -110,7 +115,13 @@ g.web.on_message(function (msg)
     switch(msg.topic)
     {
         case 'state':
-            game.state = msg.state;
+            game.state.target = msg.state;
+            if (Object.keys(game.state.display).length != Object.keys(game.state.target).length ||
+                Object.keys(game.state.display.players).length != Object.keys(game.state.target.players).length)
+            {
+                game.state.display = game.state.target;
+            }
+
             game.my_id = msg.player_id;
             break;
     }
@@ -119,6 +130,7 @@ g.web.on_message(function (msg)
 
 g.update(function (dt)
 {
+    if (!game.my_id) { return; }
     // const forward = me.q.quat_rotate_vector([0, 0, 1]);
     // const up = game.player.q.quat_rotate_vector([0, 1, 0]);
     // const right = forward.cross(up);
@@ -132,7 +144,7 @@ g.update(function (dt)
     if (g.web.key.is_pressed(' ')) { thrust = thrust.add([0,-1, 0]); }
     if (g.web.key.is_pressed('Shift')) { thrust = thrust.add([0, 1, 0]); }
 
-    var me = game.state.players[game.my_id]
+    var me = game.state.target.players[game.my_id]
     if (g.web.key.is_pressed('q')) { roll = -1; }
     if (g.web.key.is_pressed('e')) { roll = 1; }
 
@@ -149,7 +161,15 @@ g.update(function (dt)
         me.thrust = thrust;
     }
 
-    update_camera(game.cam, game.state.players[game.my_id], 8, dt);
+    var disp = game.state.display;
+    var targ = game.state.target;
+    for(var key in disp.players)
+    {
+        disp.players[key].position = disp.players[key].position.lerp(targ.players[key].position, dt * 10);
+        disp.players[key].q = targ.players[key].q;
+    }
+
+    update_camera(game.cam, game.state.display.players[game.my_id], 8, dt);
 
     game.t += dt;
 });
@@ -208,9 +228,9 @@ g.web.draw(function (dt)
 
     draw_skybox();
 
-    for (const player_id in game.state.players)
+    for (const player_id in game.state.display.players)
     {
-        draw_player(game.state.players[player_id]);
+        draw_player(game.state.display.players[player_id]);
     }
 
     draw_player({
