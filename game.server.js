@@ -157,16 +157,19 @@ function spawn_debris(position)
 
 function spawn_ship(position, velocity)
 {
+  const away = [].quat_rotation([0,1,0], -Math.PI - Math.PI/2);
+  const back = [].quat_rotation([0,1,0], Math.PI - Math.PI/2);
   return {
     level: Math.floor(Math.random() * 10),
     position: position,
     velocity: velocity,
-    q: [].quat_rotation([0,1,0], Math.PI * velocity[0] - Math.PI/2)
+    q: velocity[0] < 0 ? away : back
   };
 }
 
 // complete game state
 var state = {
+  players: {},
   debris: [],
   ships: [],
   ships_saved: 0,
@@ -175,7 +178,7 @@ var state = {
 };
 
 module.exports.server = {
-  // map of all connected players
+  // map of all connected playerss
   players: {},
 
   // handlers for all player connection events
@@ -274,11 +277,12 @@ module.exports.server = {
   },
   // main game loop
   update: function(dt) {
-    state.players = {};
+
 
     if (Object.keys(this.players).length == 0)
     {
       state = {
+        players: {},
         debris: [],
         ships: [],
         ships_saved: 0,
@@ -287,6 +291,7 @@ module.exports.server = {
       };
     }
 
+    state.players = {};
     // update all player dynamics
     for (var player_key in this.players) {
       var player = this.players[player_key];
@@ -347,11 +352,38 @@ module.exports.server = {
 
             s.position[0] = 2000;
 
-            // for (var player_key in this.players)
-            // {
-            //   this.players[player_key].message_queue.push_msg('What are you doing up there?!')
-            //   this.players[player_key].message_queue.push_msg('A ship was destroyed!!!')
-            // }
+            state.ships_lost++;
+
+            if (state.ships_lost >= 3)
+            {
+              state = {
+                players: {},
+                debris: [],
+                ships: [],
+                ships_saved: 0,
+                ships_lost: 0,
+                convoy_time: 30
+              };
+
+              for (var player_key in this.players)
+              {
+                for (var i = 0; i < 25; i++) {
+                  const r = Math.random() * 50 + 50;
+                  const t = Math.random() * Math.PI * 2;
+                  const p = [ Math.cos(t) * r, Math.random() * 10 - 5, Math.sin(t) * r ];
+                  state.debris.push(spawn_debris(p));
+                }
+
+                this.players[player_key].message_queue.push_msg("You're fired!!!");
+                this.players[player_key].message_queue.push_msg('Too many ships have been lost!!!!');
+              }
+            }
+
+            for (var player_key in this.players)
+            {
+              this.players[player_key].message_queue.push_msg('What are you doing up there?!');
+              this.players[player_key].message_queue.push_msg('A ship was destroyed!!!');
+            }
           }
         }
       }
