@@ -18,12 +18,12 @@ const asset_list = [
     'imgs/test.png',
     'imgs/moon.jpg',
     'imgs/player-0.png',
-    'imgs/player-1.png',
+    'imgs/ship-0.png',
     'imgs/debris-0.png',
     'meshes/plane.json',
     'meshes/exported-cube.json',
     'meshes/moon.json',
-    'meshes/player-1.json',
+    'meshes/ship-0.json',
     'meshes/player-0.json',
     'meshes/debris-0.json'
 ];
@@ -89,7 +89,7 @@ g.initialize(function ()
 
 
         g.web.assets['mesh/cube'] = g.web.gfx.mesh.create(g.web.assets['meshes/exported-cube.json']);
-        g.web.assets['mesh/player-1'] = g.web.gfx.mesh.create(g.web.assets['meshes/player-1.json']);
+        g.web.assets['mesh/ship-0'] = g.web.gfx.mesh.create(g.web.assets['meshes/ship-0.json']);
         g.web.assets['mesh/player-0'] = g.web.gfx.mesh.create(g.web.assets['meshes/player-0.json']);
         g.web.assets['mesh/debris-0'] = g.web.gfx.mesh.create(g.web.assets['meshes/debris-0.json']);
         g.web.assets['mesh/moon'] = g.web.gfx.mesh.create(g.web.assets['meshes/moon.json']);
@@ -102,9 +102,9 @@ g.initialize(function ()
                                                      .pixelated()
                                                      .create(g.web.assets["imgs/player-0.png"]);
 
-        g.web.assets['tex/player-1'] = g.web.gfx.texture.repeating()
+        g.web.assets['tex/ship-0'] = g.web.gfx.texture.repeating()
                                                         .pixelated()
-                                                        .create(g.web.assets["imgs/player-1.png"]);
+                                                        .create(g.web.assets["imgs/ship-0.png"]);
 
         g.web.assets['tex/debris-0'] = g.web.gfx.texture.repeating()
                                                      .pixelated()
@@ -379,6 +379,29 @@ function draw_debris(debris)
     }
 }
 
+
+function draw_ships(ships)
+{
+    const mesh = g.web.assets['mesh/ship-0'];
+    const tex = g.web.assets['tex/ship-0'];
+
+    mesh.using_shader('foggy_textured')
+    .with_attribute({name:'a_position', buffer: 'positions', components: 3})
+    .with_attribute({name:'a_tex_coord', buffer: 'texture_coords', components: 2})
+    .with_camera(game.cam);
+
+    for (var i = ships.length; i--;)
+    {
+        const q = ships[i].q;
+        const model = q.quat_to_matrix().mat_mul([].translate(ships[i].position));
+
+        mesh.using_shader('foggy_textured')
+        .set_uniform('u_model').mat4(model)
+        .set_uniform('u_texture').texture(tex)
+        .draw_tris();
+    }
+}
+
 g.web.draw(function (dt)
 {
     if (g.is_running == false) { return; }
@@ -397,6 +420,8 @@ g.web.draw(function (dt)
     }
 
     draw_debris(game.state.display.debris);
+
+    draw_ships(game.state.target.ships);
 
     draw_safety_indicator(
         game.state.display.players[game.my_id],
