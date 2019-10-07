@@ -28,7 +28,8 @@ function debris_cleanup(debris, players)
   for (var i = 0; i < debris.length; i++)
   {
     var a = debris[i];
-    if (a.position.len() > k.moon.radius)
+    const len = a.position.len();
+    if (len > k.moon.radius && len < 250)
     {
       list.push(a);
     }
@@ -36,7 +37,10 @@ function debris_cleanup(debris, players)
     {
       if (a.deorbiter)
       {
-        players[a.deorbiter].deorbited_debris++;
+        if (a.deorbiter in players)
+        {
+          players[a.deorbiter].deorbited_debris++;
+        }
       }
     }
   }
@@ -145,7 +149,7 @@ function spawn_debris(position)
 
   return {
     level: Math.floor(Math.random() * 10),
-    mass: 0.25 + Math.random(),
+    mass: 0.5 + Math.random(),
     position: position,
     velocity: v
   };
@@ -161,16 +165,19 @@ function spawn_ship(position, velocity)
   };
 }
 
+// complete game state
+var state = {
+  debris: [],
+  ships: [],
+  ships_saved: 0,
+  ships_lost: 0,
+  convoy_time: 30
+};
+
 module.exports.server = {
   // map of all connected players
   players: {},
-  // complete game state
-  state: {
-    debris: [],
-    ships: [],
-    ships_saved: 0,
-    convoy_time: 30
-  },
+
   // handlers for all player connection events
   player: {
     connected: function(player) {
@@ -231,11 +238,18 @@ module.exports.server = {
         return player.state.q.quat_rotate_vector([1, 0, 0]);
       };
 
-      console.log("player: " + player.id + " connected");
-
       player.message_queue.push_msg('Push debris out of orbit to keep ships safe!');
       player.message_queue.push_msg('You are a space janitor of a busy moon settlement');
       player.message_queue.push_msg('Welcome janitor ' + player.id + '!');
+
+      for (var i = 0; i < 25; i++) {
+        const r = Math.random() * 50 + 50;
+        const t = Math.random() * Math.PI * 2;
+        const p = [ Math.cos(t) * r, Math.random() * 10 - 5, Math.sin(t) * r ];
+        state.debris.push(spawn_debris(p));
+      }
+
+      console.log("player: " + player.id + " connected");
     },
     on_message: function(player, message) {
       switch (message.topic) {
@@ -260,7 +274,18 @@ module.exports.server = {
   },
   // main game loop
   update: function(dt) {
-    this.state.players = {};
+    state.players = {};
+
+    if (Object.keys(this.players).length == 0)
+    {
+      state = {
+        debris: [],
+        ships: [],
+        ships_saved: 0,
+        ships_lost: 0,
+        convoy_time: 30
+      };
+    }
 
     // update all player dynamics
     for (var player_key in this.players) {
@@ -278,9 +303,9 @@ module.exports.server = {
       const acc = r_acc.add(u_acc).add(f_acc);//.mul(0.1);
 
       // player debris collision
-      for (var i = 0; i < this.state.debris.length; i++)
+      for (var i = 0; i < state.debris.length; i++)
       {
-        var d = this.state.debris[i];
+        var d = state.debris[i];
         const r = d.mass;
 
         if (player.state.position.sub(d.position).len() < r)
@@ -294,14 +319,14 @@ module.exports.server = {
 
       // ship debris collision
       var debris_queue = []
-      for (var i = 0; i < this.state.debris.length; i++)
+      for (var i = 0; i < state.debris.length; i++)
       {
-        var d = this.state.debris[i];
+        var d = state.debris[i];
         const r = d.mass;
 
-        for (var j = 0; j < this.state.ships.length; j++)
+        for (var j = 0; j < state.ships.length; j++)
         {
-          var s = this.state.ships[j];
+          var s = state.ships[j];
 
           if (s.position.sub(d.position).len() < r + 1)
           {
@@ -322,15 +347,15 @@ module.exports.server = {
 
             s.position[0] = 2000;
 
-            for (var player_key in this.players)
-            {
-              this.players[player_key].message_queue.push_msg('What are you doing up there?!')
-              this.players[player_key].message_queue.push_msg('A ship was destroyed!!!')
-            }
+            // for (var player_key in this.players)
+            // {
+            //   this.players[player_key].message_queue.push_msg('What are you doing up there?!')
+            //   this.players[player_key].message_queue.push_msg('A ship was destroyed!!!')
+            // }
           }
         }
       }
-      this.state.debris = this.state.debris.concat(debris_queue);
+      state.debris = state.debris.concat(debris_queue);
 
       // accelerate player
       grav = gravitational_force(player.state.position, [0, 0, 0], k.moon.mass);
@@ -342,16 +367,16 @@ module.exports.server = {
       player.state.position = player.state.position.add(player.state.velocity);
       this.player.update(player, dt);
 
-      this.state.players[player_key] = player.state;
+      state.players[player_key] = player.state;
     }
 
 
-    this.state.convoy_time -= dt;
+    state.convoy_time -= dt;
 
-    if (this.state.convoy_time <= 0)
+    if (state.convoy_time <= 0)
     {
-      spawn_convoy(this.state.ships);
-      this.state.convoy_time = 30;
+      spawn_convoy(state.ships);
+      state.convoy_time = 30;
       for (var player_key in this.players)
       {
         this.players[player_key].message_queue.push_msg('Ship traffic incoming!')
@@ -359,17 +384,17 @@ module.exports.server = {
     }
 
     // remove debris that have fallen into the moon
-    this.state.debris = debris_cleanup(this.state.debris, this.state.players);
+    state.debris = debris_cleanup(state.debris, state.players);
 
-    this.state.ships = ship_cleanup(this.state);
+    state.ships = ship_cleanup(state);
 
     // update position of debris and if they would go through the gate
-    debris_dynamics(this.state.debris, dt);
+    debris_dynamics(state.debris, dt);
 
-    ship_dynamics(this.state.ships, dt);
+    ship_dynamics(state.ships, dt);
 
     // send states to all players
-    const state_t = JSON.stringify(this.state, function(key, value) {
+    const state_t = JSON.stringify(state, function(key, value) {
         // limit precision of floats
         if (typeof value === 'number') {
             return parseFloat(value.toFixed(3));
@@ -383,16 +408,6 @@ module.exports.server = {
 
 
       player.send({ topic: "state", player_id: player_key, state: state_t, message: player.message_queue.peek() });
-    }
-  },
-  //initial state
-  setup: function(debrisCount) {
-    this.state.gate = { position: [0, 0, 0] };
-    for (var i = 0; i < debrisCount; i++) {
-      const r = Math.random() * 50 + 50;
-      const t = Math.random() * Math.PI * 2;
-      const p = [ Math.cos(t) * r, Math.random() * 10 - 5, Math.sin(t) * r ];
-      this.state.debris.push(spawn_debris(p));
     }
   }
 };
