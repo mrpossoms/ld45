@@ -172,6 +172,7 @@ g.web.on_message(function (msg)
     switch(msg.topic)
     {
         case 'state':
+            msg.state = JSON.parse(msg.state);
             game.state.target = msg.state;
             if (
                 Object.keys(game.state.display).length != Object.keys(game.state.target).length ||
