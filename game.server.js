@@ -168,7 +168,7 @@ module.exports.server = {
   state: {
     debris: [],
     ships: [],
-    ships_saved: 0,s
+    ships_saved: 0,
     convoy_time: 30
   },
   // handlers for all player connection events
@@ -201,7 +201,7 @@ module.exports.server = {
         this.push_msg = function(msg)
         {
           this.q.push(msg);
-          this.time = msg.split(' ').length;
+          this.time = msg.split(' ').length + 1;
         };
 
         this.update = function(dt)
@@ -341,7 +341,10 @@ module.exports.server = {
 
       player.state.position = player.state.position.add(player.state.velocity);
       this.player.update(player, dt);
+
+      this.state.players[player_key] = player.state;
     }
+
 
     this.state.convoy_time -= dt;
 
