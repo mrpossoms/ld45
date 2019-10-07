@@ -52,13 +52,39 @@ function ship_cleanup(ships)
   {
     var a = ships[i];
     const dist = a.position.len();
-    if (dist > k.moon.radius && dist < 1000);
+    if (dist >= k.moon.radius/2 && dist <= 1000)
     {
       list.push(a);
     }
   }
 
   return list;
+}
+
+function spawn_convoy(ships)
+{
+  var size = 1 + Math.floor(Math.random() * 10);
+  const is_arriving = false; //Math.random() > 0.5;
+
+  var velocity = [0, 0, 0];
+  var origin = [0, 0, 0];
+
+  if (is_arriving)
+  {
+    velocity = [1, 0, 0];
+    origin = [1000, 0, 0];
+  }
+  else
+  {
+    velocity = [-1, 0, 0];
+    origin = [-k.moon.radius/2, 0, 0];
+  }
+
+  for(;size--;)
+  {
+    const rf = function() { return 2 * (Math.random() - 0.5); }
+    ships.push(spawn_ship(origin.add([size * 3, rf(), rf()]), velocity));
+  }
 }
 
 function debris_dynamics(debris, dt)
@@ -98,6 +124,16 @@ function debris_dynamics(debris, dt)
 	}
 }
 
+function ship_dynamics(ships, dt)
+{
+  for (var i = 0; i < ships.length; i++)
+  {
+    var a = ships[i];
+    const v = a.velocity.mul(-a.position[0] / 20);
+    a.position = a.position.add(v.mul(dt));
+  }
+}
+
 function spawn_debris(position)
 {
   const r = position.len();
@@ -116,7 +152,8 @@ function spawn_ship(position, velocity)
   return {
     level: Math.floor(Math.random() * 10),
     position: position,
-    velocity: velocity
+    velocity: velocity,
+    q: [].quat_rotation([0,1,0], Math.PI * velocity[0] - Math.PI/2)
   };
 }
 
@@ -255,8 +292,12 @@ module.exports.server = {
     // remove debris that have fallen into the moon
     this.state.debris = debris_cleanup(this.state.debris, this.state.players);
 
+    this.state.ships = ship_cleanup(this.state.ships);
+
     // update position of debris and if they would go through the gate
     debris_dynamics(this.state.debris, dt);
+
+    ship_dynamics(this.state.ships, dt);
 
     // send states to all players
     for (var player_key in this.players) {
@@ -274,5 +315,7 @@ module.exports.server = {
       const p = [ Math.cos(t) * r, Math.random() * 10 - 5, Math.sin(t) * r ];
       this.state.debris.push(spawn_debris(p));
     }
+
+    spawn_convoy(this.state.ships);
   }
 };
