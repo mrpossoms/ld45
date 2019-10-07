@@ -1,3 +1,4 @@
+var path = require('path');
 var express = require('express');
 var app = express();
 var http = require('http').Server(app);
@@ -51,6 +52,14 @@ setInterval(function() {
 	}
 }, dt * 1000);
 
+/*
+app.get('/', function(res, req)
+{
+	res.sendFile('static/index.html');
+});
+*/
+
 // express setup
-app.use(express.static('static'));
-http.listen(8080, function() { console.log('Running!'); });
+app.use(express.static(path.join(__dirname, 'static')));
+//app.use(express.static('static'));
+http.listen(3001, function() { console.log('Running!'); });

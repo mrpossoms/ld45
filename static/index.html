@@ -1,6 +1,38 @@
 <html>
 <head>
-<link rel="stylesheet" type="text/css" href="css/style.css" media="screen" />
+<style>
+html {
+    color: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+canvas {
+    position: absolute;
+    z-index: 0;
+}
+
+p {
+    position: absolute;
+    z-index: 1;
+    margin:20px;
+}
+
+.left {
+
+}
+
+.right {
+    left: 100%;
+    margin-left: -200px;
+}
+
+#server_msg {
+    font-size: 20px;
+    text-align: center;
+    top:40%;
+    width: 100%;
+}
+</style>
 <script src="/socket.io/socket.io.js"></script>
 <script type="text/javascript" src="js/g.js" charset="UTF-8"></script>
 <script type="text/javascript" src="js/g.web.js" charset="UTF-8"></script>
