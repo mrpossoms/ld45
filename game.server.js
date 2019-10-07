@@ -56,10 +56,6 @@ function ship_cleanup(ships)
     {
       list.push(a);
     }
-    else
-    {
-      console.log(a.position);
-    }
   }
 
   return list;
