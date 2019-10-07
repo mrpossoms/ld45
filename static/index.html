@@ -188,7 +188,7 @@ g.web.on_message(function (msg)
             game.my_id = msg.player_id;
 
             document.getElementById('my_debris').innerText = 'My de-orbited debris: ' + game.state.target.players[game.my_id].deorbited_debris;
-;
+            document.getElementById('server_msg').innerText = msg.message;
             break;
     }
 });
@@ -457,6 +457,7 @@ g.start();
 <body style="margin:0" onload="on_load()">
 <p id="debris" class="left">Debris:</p>
 <p id="my_debris" class="right">My de-orbited debris:</p>
+<p id="server_msg"></p>
 <canvas style="padding:0;margin:0;width:100%;height:100%"></canvas>
 </body>
 </html>

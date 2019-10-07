@@ -168,9 +168,8 @@ module.exports.server = {
   // handlers for all player connection events
   player: {
     connected: function(player) {
-      const r = Math.random() + 50;
-      const t = Math.random() * Math.PI * 2;
-      const p = [ Math.cos(t) * r, Math.random() * 10 - 5, Math.sin(t) * r ];
+      const r = 50;
+      const p = [ -50, 0, 0 ];
       const v = tangent(p, [0, 0, 0]).mul(Math.sqrt(k.moon.mass / r));
       player.state = {
         position: p,
@@ -180,6 +179,41 @@ module.exports.server = {
         roll: 0,
         deorbited_debris: 0
       };
+
+      function message_queue()
+      {
+        this.q = [];
+        this.time = 0;
+        this.peek = function()
+        {
+          if (this.empty()) { return ''; }
+          return this.q[this.q.length - 1];
+        };
+
+        this.empty = function() { return this.q.length == 0; }
+
+        this.push_msg = function(msg)
+        {
+          this.q.push(msg);
+          this.time = msg.split(' ').length;
+        };
+
+        this.update = function(dt)
+        {
+          this.time -= dt;
+
+          if (this.time <= 0 && !this.empty())
+          {
+            this.q.pop();
+            if (!this.empty())
+            {
+              this.time = this.peek().split(' ').length;
+            }
+          }
+        };
+      }
+
+      player.message_queue = new message_queue();
 
       player.forward = function() {
         return player.state.q.quat_rotate_vector([0, 0, 1]);
@@ -192,6 +226,10 @@ module.exports.server = {
       };
 
       console.log("player: " + player.id + " connected");
+
+      player.message_queue.push_msg('Push debris out of orbit to keep ships safe!');
+      player.message_queue.push_msg('You are a space janitor of a busy moon settlement');
+      player.message_queue.push_msg('Welcome player!');
     },
     on_message: function(player, message) {
       switch (message.topic) {
@@ -209,7 +247,7 @@ module.exports.server = {
           break;
       }
     },
-    update: function(player, dt) {},
+    update: function(player, dt) { player.message_queue.update(dt); },
     disconnected: function(player) {
       console.log("player: " + player.id + " disconnected");
     }
@@ -261,10 +299,18 @@ module.exports.server = {
 
           if (s.position.sub(d.position).len() < r + 1)
           {
-            for(var l = (s.level + 1) * 2; l--;)
+            for(var l = (s.level + 1); l--;)
             {
               var deb = spawn_debris(s.position.add([].random_unit()));
               deb.velocity = deb.velocity.add([].random_unit().mul(0.05));
+              debris_queue.push(deb);
+            }
+
+            for(var l = (s.level + 1); l--;)
+            {
+              var deb = spawn_debris(s.position.add([].random_unit()));
+              deb.velocity = deb.velocity.add([].random_unit());
+              deb.level = 0;
               debris_queue.push(deb);
             }
 
@@ -329,7 +375,7 @@ module.exports.server = {
     for (var player_key in this.players) {
       var player = this.players[player_key];
 
-      player.send({ topic: "state", player_id: player_key, state: this.state });
+      player.send({ topic: "state", player_id: player_key, state: this.state, message: player.message_queue.peek() });
     }
   },
   //initial state
