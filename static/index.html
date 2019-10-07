@@ -424,15 +424,13 @@ function draw_ships(ships)
         const mesh = g.web.assets['mesh/ship-' + si];
         const tex = g.web.assets['tex/ship-' + si];
 
+        const q = [].quat_rotation([0,1,0], ships[i].velocity[0] * (Math.PI + Math.PI/2));
+        const model = q.quat_to_matrix().mat_mul([].translate(ships[i].position));
+
         mesh.using_shader('foggy_textured')
         .with_attribute({name:'a_position', buffer: 'positions', components: 3})
         .with_attribute({name:'a_tex_coord', buffer: 'texture_coords', components: 2})
-        .with_camera(game.cam);
-
-        const q = ships[i].q;
-        const model = q.quat_inverse().quat_to_matrix().mat_mul([].translate(ships[i].position));
-
-        mesh.using_shader('foggy_textured')
+        .with_camera(game.cam)
         .set_uniform('u_model').mat4(model)
         .set_uniform('u_texture').texture(tex)
         .draw_tris();

@@ -4,7 +4,10 @@ const k = {
 	moon: {
 		mass: 1,
     radius: 30
-	}
+	},
+  convoy: {
+    spawn_time: 30
+  }
 };
 
 function tangent(position, body_position)
@@ -157,13 +160,10 @@ function spawn_debris(position)
 
 function spawn_ship(position, velocity)
 {
-  const away = [].quat_rotation([0,1,0], -Math.PI - Math.PI/2);
-  const back = [].quat_rotation([0,1,0], Math.PI - Math.PI/2);
   return {
     level: Math.floor(Math.random() * 10),
     position: position,
-    velocity: velocity,
-    q: velocity[0] < 0 ? away : back
+    velocity: velocity
   };
 }
 
@@ -174,7 +174,7 @@ var state = {
   ships: [],
   ships_saved: 0,
   ships_lost: 0,
-  convoy_time: 30
+  convoy_time: k.convoy.spawn_time
 };
 
 module.exports.server = {
@@ -287,7 +287,7 @@ module.exports.server = {
         ships: [],
         ships_saved: 0,
         ships_lost: 0,
-        convoy_time: 30
+        convoy_time: k.convoy.spawn_time
       };
     }
 
@@ -362,7 +362,7 @@ module.exports.server = {
                 ships: [],
                 ships_saved: 0,
                 ships_lost: 0,
-                convoy_time: 30
+                convoy_time: k.convoy.spawn_time
               };
 
               for (var player_key in this.players)
@@ -408,7 +408,7 @@ module.exports.server = {
     if (state.convoy_time <= 0)
     {
       spawn_convoy(state.ships);
-      state.convoy_time = 30;
+      state.convoy_time = k.convoy.spawn_time;
       for (var player_key in this.players)
       {
         this.players[player_key].message_queue.push_msg('Ship traffic incoming!')
