@@ -172,6 +172,7 @@ g.web.on_message(function (msg)
     switch(msg.topic)
     {
         case 'state':
+            msg.state = JSON.parse(msg.state);
             game.state.target = msg.state;
             if (
                 Object.keys(game.state.display).length != Object.keys(game.state.target).length ||
@@ -179,15 +180,26 @@ g.web.on_message(function (msg)
                 game.state.display.debris.length != game.state.target.debris.length
                 )
             {
-                document.getElementById('debris').innerText = 'Debris: ' + game.state.target.debris.length;
+                var label = document.getElementById('debris');
+                label.innerText = 'Ships saved: ' + game.state.target.ships_saved + '\n' +
+                                  'Debris remaining: ' + game.state.target.debris.length + '\n' +
+                                  'Ships lost: ' + game.state.target.ships_lost + '\n';
+
                 game.state.display = game.state.target;
 
 
             }
 
-            game.my_id = msg.player_id;
+            game.my_id = parseInt(msg.player_id);
 
-            document.getElementById('my_debris').innerText = 'My de-orbited debris: ' + game.state.target.players[game.my_id].deorbited_debris;
+            var deb_text = document.getElementById('my_debris');
+            deb_text.innerText = 'Debris cleared\n';
+            for (var player_key in game.state.target.players)
+            {
+                var player = game.state.target.players[player_key];
+                deb_text.innerText += player_key + (game.my_id == player_key ? ' (you): ' : ': ') + player.deorbited_debris + '\n';
+            }
+
             document.getElementById('server_msg').innerText = msg.message;
             break;
     }
@@ -210,9 +222,15 @@ g.update(function (dt)
     if (g.web.key.is_pressed(' ')) { thrust = thrust.add([0,-1, 0]); }
     if (g.web.key.is_pressed('shift')) { thrust = thrust.add([0, 1, 0]); }
 
-    var me = game.state.target.players[game.my_id]
+    var me = game.state.target.players[game.my_id];
+
     if (g.web.key.is_pressed('q')) { roll = -1; }
     if (g.web.key.is_pressed('e')) { roll = 1; }
+
+    if (!me)
+    {
+        console.log('What!?');
+    }
 
     if (roll != me.roll)
     {
@@ -273,7 +291,7 @@ function update_camera(camera, player, dist, dt)
     const forward = q.quat_rotate_vector([0, 0, 1]);
     var up = q.quat_rotate_vector([0, 1, 0]);
 
-    camera.position = camera.position.lerp(player.position.add(forward.mul(-dist).sub(up)), dt * k.camera.snap);
+    camera.position = camera.position.lerp(player.position.add(forward.mul(-dist)), dt * k.camera.snap);
     camera.up = camera.up.lerp(up, dt * k.camera.snap);
 
 
@@ -412,7 +430,7 @@ function draw_ships(ships)
         .with_camera(game.cam);
 
         const q = ships[i].q;
-        const model = q.quat_to_matrix().mat_mul([].translate(ships[i].position));
+        const model = q.quat_inverse().quat_to_matrix().mat_mul([].translate(ships[i].position));
 
         mesh.using_shader('foggy_textured')
         .set_uniform('u_model').mat4(model)

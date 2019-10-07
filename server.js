@@ -18,7 +18,7 @@ function new_player_id()
 	return id;
 }
 
-game.server.setup(100);
+// game.server.setup(50);
 
 // socket io setup
 io.on('connection', function(player) {
