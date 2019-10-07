@@ -21,7 +21,7 @@ function gravitational_force(position, body_position, body_mass)
 	return r.norm().mul(m / r_2);
 }
 
-function debris_cleanup(debris)
+function debris_cleanup(debris, players)
 {
   var list = [];
 
@@ -31,6 +31,13 @@ function debris_cleanup(debris)
     if (a.position.len() > k.moon.radius)
     {
       list.push(a);
+    }
+    else
+    {
+      if (a.deorbiter)
+      {
+        players[a.deorbiter].deorbited_debris++;
+      }
     }
   }
 
@@ -133,7 +140,8 @@ module.exports.server = {
         q: [0, 0, 0, 1],
         velocity: v,
         thrust: [0, 0, 0],
-        roll: 0
+        roll: 0,
+        deorbited_debris: 0
       };
 
       player.forward = function() {
@@ -199,6 +207,7 @@ module.exports.server = {
           const tmp = player.state.velocity;
           player.state.velocity = d.velocity;
           d.velocity = tmp;
+          d.deorbiter = player_key;
         }
       }
 
@@ -244,7 +253,7 @@ module.exports.server = {
     }
 
     // remove debris that have fallen into the moon
-    this.state.debris = debris_cleanup(this.state.debris);
+    this.state.debris = debris_cleanup(this.state.debris, this.state.players);
 
     // update position of debris and if they would go through the gate
     debris_dynamics(this.state.debris, dt);

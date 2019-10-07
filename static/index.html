@@ -1,5 +1,6 @@
 <html>
 <head>
+<link rel="stylesheet" type="text/css" href="css/style.css" media="screen" />
 <script src="/socket.io/socket.io.js"></script>
 <script type="text/javascript" src="js/g.js" charset="UTF-8"></script>
 <script type="text/javascript" src="js/g.web.js" charset="UTF-8"></script>
@@ -29,7 +30,7 @@ const asset_list = [
 
 const k = {
     camera: {
-        snap: 10
+        snap: 20
     },
     mouse: {
         sensitivity: 0.005
@@ -161,10 +162,16 @@ g.web.on_message(function (msg)
                 game.state.display.debris.length != game.state.target.debris.length
                 )
             {
+                document.getElementById('debris').innerText = 'Debris: ' + game.state.target.debris.length;
                 game.state.display = game.state.target;
+
+
             }
 
             game.my_id = msg.player_id;
+
+            document.getElementById('my_debris').innerText = 'My de-orbited debris: ' + game.state.target.players[game.my_id].deorbited_debris;
+;
             break;
     }
 });
@@ -404,6 +411,8 @@ g.start();
 </head>
 
 <body style="margin:0" onload="on_load()">
+<p id="debris" class="left">Debris:</p>
+<p id="my_debris" class="right">My de-orbited debris:</p>
 <canvas style="padding:0;margin:0;width:100%;height:100%"></canvas>
 </body>
 </html>
