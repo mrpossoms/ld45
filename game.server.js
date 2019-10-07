@@ -56,6 +56,10 @@ function ship_cleanup(ships)
     {
       list.push(a);
     }
+    else
+    {
+      console.log(a.position);
+    }
   }
 
   return list;
@@ -63,7 +67,7 @@ function ship_cleanup(ships)
 
 function spawn_convoy(ships)
 {
-  var size = 1 + Math.floor(Math.random() * 10);
+  var size = 2 + Math.floor(Math.random() * 10);
   const is_arriving = false; //Math.random() > 0.5;
 
   var velocity = [0, 0, 0];
@@ -83,7 +87,7 @@ function spawn_convoy(ships)
   for(;size--;)
   {
     const rf = function() { return 2 * (Math.random() - 0.5); }
-    ships.push(spawn_ship(origin.add([size * 3, rf(), rf()]), velocity));
+    ships.push(spawn_ship(origin.add(velocity.mul(size * 3)).add([0, rf(), rf()]), velocity));
   }
 }
 
@@ -247,6 +251,32 @@ module.exports.server = {
           d.deorbiter = player_key;
         }
       }
+
+      // ship debris collision
+      var debris_queue = []
+      for (var i = 0; i < this.state.debris.length; i++)
+      {
+        var d = this.state.debris[i];
+        const r = d.mass;
+
+        for (var j = 0; j < this.state.ships.length; j++)
+        {
+          var s = this.state.ships[j];
+
+          if (s.position.sub(d.position).len() < r + 1)
+          {
+            for(var l = (s.level + 1) * 2; l--;)
+            {
+              var deb = spawn_debris(s.position.add([].random_unit()));
+              deb.velocity = deb.velocity.add([].random_unit().mul(0.05));
+              debris_queue.push(deb);
+            }
+
+            s.position[0] = 2000;
+          }
+        }
+      }
+      this.state.debris = this.state.debris.concat(debris_queue);
 
       // accelerate player
       grav = gravitational_force(player.state.position, [0, 0, 0], k.moon.mass);
