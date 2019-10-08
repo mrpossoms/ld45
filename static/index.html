@@ -80,6 +80,7 @@ var game = {
     t: 0,
     // player: {},
     my_id: 0,
+    my_q: [0, 0, 0, 1],
     state: {
         display: {},
         target: {},
@@ -181,12 +182,13 @@ g.web.pointer.on_move(function (event)
 {
     if (g.is_running == false) { return; }
 
-    var q = game.state.target.players[game.my_id].q || [0, 0, 0, 1];
+    var q = game.my_q || [0, 0, 0, 1];
 
     const dqx = [].quat_rotation([0, 1, 0], event.movementX * k.mouse.sensitivity);
     const dqy = [].quat_rotation([1, 0, 0], -event.movementY * k.mouse.sensitivity);
     const dq = dqx.quat_mul(dqy)
     q = q.quat_mul(dq);
+    game.my_q = q;
 
     g.web.socket().send({topic:'ori', q: q});
 });
@@ -205,6 +207,7 @@ g.web.on_message(function (msg)
     {
         case 'state':
             msg.state = JSON.parse(msg.state);
+	    
             game.state.target = msg.state;
             if (
                 Object.keys(game.state.display).length != Object.keys(game.state.target).length ||
@@ -256,8 +259,8 @@ g.update(function (dt)
 
     var me = game.state.target.players[game.my_id];
 
-    if (g.web.key.is_pressed('q')) { roll = -1; }
-    if (g.web.key.is_pressed('e')) { roll = 1; }
+    if (g.web.key.is_pressed('q')) { game.my_q = game.my_q.quat_mul([].quat_rotation([0, 0, 1], -dt)); }
+    if (g.web.key.is_pressed('e')) { game.my_q = game.my_q.quat_mul([].quat_rotation([0, 0, 1], dt)); }
 
     if (!me)
     {
@@ -319,7 +322,7 @@ function nearest_debris(debris, position)
 
 function update_camera(camera, player, dist, dt)
 {
-    const q = player.q;//.quat_inverse();
+    const q = game.my_q;//.quat_inverse();
     const forward = q.quat_rotate_vector([0, 0, 1]);
     var up = q.quat_rotate_vector([0, 1, 0]);
 
@@ -407,10 +410,10 @@ function draw_safety_indicator(player, debris)
 }
 
 
-function draw_player(player)
+function draw_player(player, q)
 {
     // const model = [].translate(player.position).mat_mul(player.q.quat_inverse().quat_to_matrix());
-    const model = player.q.quat_inverse().quat_to_matrix().mat_mul([].translate(player.position));
+    const model = q.quat_inverse().quat_to_matrix().mat_mul([].translate(player.position));
     const mesh = g.web.assets['mesh/player-0'];
 
     mesh.using_shader('foggy_textured')
@@ -483,7 +486,10 @@ g.web.draw(function (dt)
 
     for (const player_id in game.state.display.players)
     {
-        draw_player(game.state.display.players[player_id]);
+	var q = game.state.display.players[player_id];
+	if (player_id == game.my_id) { q = game.my_q; }
+
+        draw_player(game.state.display.players[player_id], q);
     }
 
     draw_debris(game.state.display.debris);
