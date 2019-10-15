@@ -387,7 +387,7 @@ function draw_player(player, q)
 
 function draw_debris(debris)
 {
-    debris.for_each(function(debris, i)
+    g.for_each(debris, function(debris, i)
     {
         const di = debris.level % 3;
         const mesh = g.web.assets['mesh/debris-' + di];
@@ -412,7 +412,7 @@ function draw_debris(debris)
 
 function draw_ships(ships)
 {
-    ships.for_each(function(ship)
+    g.for_each(ships, function(ship)
     {
         const si = ship.level % 2;
         const mesh = g.web.assets['mesh/ship-' + si];
@@ -434,6 +434,7 @@ function draw_ships(ships)
 g.web.draw(function (dt)
 {
     if (g.is_running == false) { return; }
+    if(Object.keys(game.state.display).length == 0) { return; }
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 

@@ -1,4 +1,4 @@
-const g = require("./static/js/g.js");
+var g = require("./static/js/g.js");
 
 const k = {
 	moon: {
@@ -249,11 +249,8 @@ module.exports.server = {
 
     state.players = {};
     // update all player dynamics
-    //for (var player_key in this.players)
-    this.players.for_each(function(player, player_key) {
-      // var player = this.players[player_key];
-
-      console.log('player: ' + player);
+    const proxy = this;
+    g.for_each(this.players, function(player, player_key) {
 
       player.state.q = player.state.q.quat_mul(
         [].quat_rotation([0, 0, 1], player.state.roll * dt)
@@ -289,7 +286,7 @@ module.exports.server = {
       player.state.velocity = player.state.velocity.mul(1 - dt);
 
       player.state.position = player.state.position.add(player.state.velocity);
-      this.player.update(player, dt);
+      proxy.player.update(player, dt);
 
       state.players[player_key] = player.state;
     });
@@ -337,7 +334,7 @@ module.exports.server = {
             state.convoy_time = k.convoy.spawn_time;
 
 
-            this.players.for_each(function(player, player_key)
+            g.for_each(this.players, function(player, player_key)
             {
               for (var i = 0; i < 25; i++) {
                 const r = Math.random() * 50 + 50;
@@ -351,7 +348,7 @@ module.exports.server = {
             });
           }
 
-          this.players.for_each(function(player, player_key)
+          g.for_each(this.players, function(player, player_key)
           {
             player.message_queue.push_msg('What are you doing up there?!');
             player.message_queue.push_msg('A ship was destroyed!!!');
@@ -394,7 +391,7 @@ module.exports.server = {
         return value;
     });
 
-    this.players.for_each(function(player, player_key)
+    g.for_each(this.players, function(player, player_key)
     {
       player.send({ topic: "state", player_id: player_key, state: state_t, message: player.message_queue.peek() });
     });

@@ -3,6 +3,7 @@ var express = require('express');
 var app = express();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
+const g = require("./static/js/g.js");
 var game = game || require('./game.server.js');
 
 console.log(game);
@@ -45,10 +46,16 @@ const dt = 1 / 30;
 setInterval(function() {
 	game.server.update(dt);
 
-	for (var player_key in game.server.players)
+	// g.for_each(game.server.players, function(player)
+	// {
+	// 	console.log("update")
+	// 	game.server.player.update(player, dt);
+	// });
+
+	for (var player_id in game.server.players)
 	{
-		var player = game.server.players[player_key];
-		game.server.player.update(player, dt);
+		// console.log('update');
+		game.server.player.update(game.server.players[player_id], dt);
 	}
 }, dt * 1000);
 
