@@ -103,34 +103,23 @@ function debris_dynamics(debris, dt)
 	for (var i = 0; i < debris.length; i++)
 	{
 		var a = debris[i];
-		var previousPosition = a.position;
-		var velocity;
 
-		if (!a.captured)
+		var force = gravitational_force(a.position, [0, 0, 0], k.moon.mass);
+		const do_n_body = false;
+
+    // n-body calculation
+		for (var j = 0; do_n_body && j < debris.length; j++)
 		{
-			var force = gravitational_force(a.position, [0, 0, 0], k.moon.mass);
-			const do_n_body = false;
+			if (j == i) { continue; }
+			const b = debris[j];
+			const grav = gravitational_force(a.position, b.position, b.mass);
 
-      // n-body calculation
-			for (var j = 0; do_n_body && j < debris.length; j++)
-			{
-				if (j == i) { continue; }
-				const b = debris[j];
-				const grav = gravitational_force(a.position, b.position, b.mass);
-
-				force = force.add();
-			}
-
-			a.velocity = a.velocity.add(force);
-			a.position = a.position.add(a.velocity);
+			force = force.add();
 		}
-		else
-		{
-			// For captured as
-			var player = a.player;
-			a.position = player.state.position.add(player.forward());
-			velocity = player.state.velocity;
-		}
+
+		a.velocity = a.velocity.add(force);
+		a.position = a.position.add(a.velocity);
+
 		// TODO: Add ray code with previous position and velocity and debris player to check if they scored
 	}
 }
@@ -196,40 +185,7 @@ module.exports.server = {
         deorbited_debris: 0
       };
 
-      function message_queue()
-      {
-        this.q = [];
-        this.time = 0;
-        this.peek = function()
-        {
-          if (this.empty()) { return ''; }
-          return this.q[this.q.length - 1];
-        };
-
-        this.empty = function() { return this.q.length == 0; }
-
-        this.push_msg = function(msg)
-        {
-          this.q.push(msg);
-          this.time = msg.split(' ').length + 1;
-        };
-
-        this.update = function(dt)
-        {
-          this.time -= dt;
-
-          if (this.time <= 0 && !this.empty())
-          {
-            this.q.pop();
-            if (!this.empty())
-            {
-              this.time = this.peek().split(' ').length;
-            }
-          }
-        };
-      }
-
-      player.message_queue = new message_queue();
+      player.message_queue = [].message_queue();
 
       player.forward = function() {
         return player.state.q.quat_rotate_vector([0, 0, 1]);
@@ -293,8 +249,11 @@ module.exports.server = {
 
     state.players = {};
     // update all player dynamics
-    for (var player_key in this.players) {
-      var player = this.players[player_key];
+    //for (var player_key in this.players)
+    this.players.for_each(function(player, player_key) {
+      // var player = this.players[player_key];
+
+      console.log('player: ' + player);
 
       player.state.q = player.state.q.quat_mul(
         [].quat_rotation([0, 0, 1], player.state.roll * dt)
@@ -333,7 +292,7 @@ module.exports.server = {
       this.player.update(player, dt);
 
       state.players[player_key] = player.state;
-    }
+    });
 
 
     // ship debris collision
@@ -378,7 +337,7 @@ module.exports.server = {
             state.convoy_time = k.convoy.spawn_time;
 
 
-            for (var player_key in this.players)
+            this.players.for_each(function(player, player_key)
             {
               for (var i = 0; i < 25; i++) {
                 const r = Math.random() * 50 + 50;
@@ -387,16 +346,16 @@ module.exports.server = {
                 state.debris.push(spawn_debris(p));
               }
 
-              this.players[player_key].message_queue.push_msg("You're fired!!!");
-              this.players[player_key].message_queue.push_msg('Too many ships have been lost!!!!');
-            }
+              player.message_queue.push_msg("You're fired!!!");
+              player.message_queue.push_msg('Too many ships have been lost!!!!');
+            });
           }
 
-          for (var player_key in this.players)
+          this.players.for_each(function(player, player_key)
           {
-            this.players[player_key].message_queue.push_msg('What are you doing up there?!');
-            this.players[player_key].message_queue.push_msg('A ship was destroyed!!!');
-          }
+            player.message_queue.push_msg('What are you doing up there?!');
+            player.message_queue.push_msg('A ship was destroyed!!!');
+          });
         }
       }
     }
@@ -435,12 +394,9 @@ module.exports.server = {
         return value;
     });
 
-    for (var player_key in this.players) {
-      var player = this.players[player_key];
-
-
-
+    this.players.for_each(function(player, player_key)
+    {
       player.send({ topic: "state", player_id: player_key, state: state_t, message: player.message_queue.peek() });
-    }
+    });
   }
 };

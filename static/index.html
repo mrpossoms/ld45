@@ -126,47 +126,6 @@ g.initialize(function ()
             g.web.assets['shaders/safety_ind.frag']
         );
 
-
-        g.web.assets['mesh/cube'] = g.web.gfx.mesh.create(g.web.assets['meshes/exported-cube.json']);
-        g.web.assets['mesh/ship-0'] = g.web.gfx.mesh.create(g.web.assets['meshes/ship-0.json']);
-        g.web.assets['mesh/ship-1'] = g.web.gfx.mesh.create(g.web.assets['meshes/ship-1.json']);
-        g.web.assets['mesh/player-0'] = g.web.gfx.mesh.create(g.web.assets['meshes/player-0.json']);
-        g.web.assets['mesh/debris-0'] = g.web.gfx.mesh.create(g.web.assets['meshes/debris-0.json']);
-        g.web.assets['mesh/debris-1'] = g.web.gfx.mesh.create(g.web.assets['meshes/debris-1.json']);
-        g.web.assets['mesh/debris-2'] = g.web.gfx.mesh.create(g.web.assets['meshes/debris-2.json']);
-        g.web.assets['mesh/moon'] = g.web.gfx.mesh.create(g.web.assets['meshes/moon.json']);
-
-
-        g.web.assets['tex/stars'] = g.web.gfx.texture.repeating()
-                                                     .pixelated()
-                                                     .create(g.web.assets["imgs/stars.jpg"]);
-        g.web.assets['tex/player-0'] = g.web.gfx.texture.repeating()
-                                                     .pixelated()
-                                                     .create(g.web.assets["imgs/player-0.png"]);
-
-        g.web.assets['tex/ship-0'] = g.web.gfx.texture.repeating()
-                                                        .pixelated()
-                                                        .create(g.web.assets["imgs/ship-0.png"]);
-        g.web.assets['tex/ship-1'] = g.web.gfx.texture.repeating()
-                                                        .pixelated()
-                                                        .create(g.web.assets["imgs/ship-1.png"]);
-        g.web.assets['tex/debris-0'] = g.web.gfx.texture.repeating()
-                                                     .pixelated()
-                                                     .create(g.web.assets["imgs/debris-0.png"]);
-        g.web.assets['tex/debris-1'] = g.web.gfx.texture.repeating()
-                                                     .pixelated()
-                                                     .create(g.web.assets["imgs/debris-1.png"]);
-        g.web.assets['tex/debris-2'] = g.web.gfx.texture.repeating()
-                                                     .pixelated()
-                                                     .create(g.web.assets["imgs/debris-2.png"]);
-
-        g.web.assets['tex/moon'] = g.web.gfx.texture.repeating()
-                                                    .pixelated()
-                                                    .create(g.web.assets["imgs/moon.jpg"]);
-
-        g.web.assets['tex/test'] = g.web.gfx.texture.repeating()
-                                                     .pixelated()
-                                                     .create(g.web.assets["imgs/test.png"]);
         g.is_running = true;
 
         gl.enable(gl.BLEND);
@@ -207,7 +166,7 @@ g.web.on_message(function (msg)
     {
         case 'state':
             msg.state = JSON.parse(msg.state);
-	    
+
             game.state.target = msg.state;
             if (
                 Object.keys(game.state.display).length != Object.keys(game.state.target).length ||
@@ -338,7 +297,7 @@ function draw_skybox()
     var view = [].view([0,0,0], game.cam._forward, game.cam._up);
 
     gl.disable(gl.DEPTH_TEST);
-    g.web.assets['mesh/cube'].using_shader('basic_textured')
+    g.web.assets['mesh/exported-cube'].using_shader('basic_textured')
                              .with_attribute({name:'a_position', buffer: 'positions', components: 3})
                              .with_attribute({name:'a_tex_coord', buffer: 'texture_coords', components: 2})
                              .set_uniform('u_proj').mat4(game.cam.projection())
@@ -428,9 +387,9 @@ function draw_player(player, q)
 
 function draw_debris(debris)
 {
-    for (var i = debris.length; i--;)
+    debris.for_each(function(debris, i)
     {
-        const di = debris[i].level % 3;
+        const di = debris.level % 3;
         const mesh = g.web.assets['mesh/debris-' + di];
         const tex = g.web.assets['tex/debris-' + di];
 
@@ -440,27 +399,27 @@ function draw_debris(debris)
         .with_camera(game.cam);
 
         const q = [].quat_rotation(lut.axis[i % lut.axis.length], game.t);
-        const s = [].scale(debris[i].mass);
-        const model = s.mat_mul(q.quat_to_matrix()).mat_mul([].translate(debris[i].position));
+        const s = [].scale(debris.mass);
+        const model = s.mat_mul(q.quat_to_matrix()).mat_mul([].translate(debris.position));
 
         mesh.using_shader('foggy_textured')
         .set_uniform('u_model').mat4(model)
         .set_uniform('u_texture').texture(tex)
         .draw_tris();
-    }
+    });
 }
 
 
 function draw_ships(ships)
 {
-    for (var i = ships.length; i--;)
+    ships.for_each(function(ship)
     {
-        const si = ships[i].level % 2;
+        const si = ship.level % 2;
         const mesh = g.web.assets['mesh/ship-' + si];
         const tex = g.web.assets['tex/ship-' + si];
 
-        const q = [].quat_rotation([0,1,0], ships[i].velocity[0] * (Math.PI + Math.PI/2));
-        const model = q.quat_to_matrix().mat_mul([].translate(ships[i].position));
+        const q = [].quat_rotation([0,1,0], ship.velocity[0] * (Math.PI + Math.PI/2));
+        const model = q.quat_to_matrix().mat_mul([].translate(ship.position));
 
         mesh.using_shader('foggy_textured')
         .with_attribute({name:'a_position', buffer: 'positions', components: 3})
@@ -469,7 +428,7 @@ function draw_ships(ships)
         .set_uniform('u_model').mat4(model)
         .set_uniform('u_texture').texture(tex)
         .draw_tris();
-    }
+    });
 }
 
 g.web.draw(function (dt)
