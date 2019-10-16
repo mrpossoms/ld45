@@ -1,40 +1,6 @@
 <html>
 <head>
-<style>
-html {
-    color: #fff;
-    background-color: #333;
-    font-family: Arial, Helvetica, sans-serif;
-}
-
-canvas {
-    background-color: #333;
-    position: absolute;
-    z-index: 0;
-}
-
-p {
-    position: absolute;
-    z-index: 1;
-    margin:20px;
-}
-
-.left {
-
-}
-
-.right {
-    left: 100%;
-    margin-left: -200px;
-}
-
-#server_msg {
-    font-size: 20px;
-    text-align: center;
-    top:40%;
-    width: 100%;
-}
-</style>
+<link href="css/style.css" rel="stylesheet">
 <script src="/socket.io/socket.io.js"></script>
 <script type="text/javascript" src="js/g.js" charset="UTF-8"></script>
 <script type="text/javascript" src="js/g.web.js" charset="UTF-8"></script>
@@ -208,9 +174,6 @@ g.web.on_message(function (msg)
 g.update(function (dt)
 {
     if (!game.my_id) { return; }
-    // const forward = me.q.quat_rotate_vector([0, 0, 1]);
-    // const up = game.player.q.quat_rotate_vector([0, 1, 0]);
-    // const right = forward.cross(up);
 
     var thrust = [0, 0, 0];
     var roll = 0;
@@ -225,11 +188,6 @@ g.update(function (dt)
 
     if (g.web.key.is_pressed('q')) { game.my_q = game.my_q.quat_mul([].quat_rotation([0, 0, 1], -dt)); }
     if (g.web.key.is_pressed('e')) { game.my_q = game.my_q.quat_mul([].quat_rotation([0, 0, 1], dt)); }
-
-    if (!me)
-    {
-        console.log('What!?');
-    }
 
     if (roll != me.roll)
     {
@@ -315,7 +273,6 @@ function draw_skybox()
 
 function draw_moon()
 {
-    // const model = [].translate(player.position).mat_mul(player.q.quat_inverse().quat_to_matrix());
     const q = [].quat_rotation([0, 1, 0], game.t / 10);
     const s = [].scale(10);
     const model = s;//s.mat_mul(q.quat_to_matrix());
