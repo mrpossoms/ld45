@@ -1,1 +1,1 @@
-/Users/kirk/code/g.js/static/js/g.web.js
+../../../g.js/static/js/g.web.js

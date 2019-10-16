@@ -166,6 +166,14 @@ var state = {
   convoy_time: k.convoy.spawn_time
 };
 
+function msg(str)
+{
+	return { 
+		time: str.split(' ').length,
+		value: str
+	};
+}
+
 module.exports.server = {
   // map of all connected playerss
   players: {},
@@ -185,7 +193,7 @@ module.exports.server = {
         deorbited_debris: 0
       };
 
-      player.message_queue = [].message_queue();
+      player.message_queue = [].timed_queue();
 
       player.forward = function() {
         return player.state.q.quat_rotate_vector([0, 0, 1]);
@@ -197,9 +205,9 @@ module.exports.server = {
         return player.state.q.quat_rotate_vector([1, 0, 0]);
       };
 
-      player.message_queue.push_msg('Push debris out of orbit to keep ships safe!');
-      player.message_queue.push_msg('You are a space janitor of a busy moon settlement');
-      player.message_queue.push_msg('Welcome janitor ' + player.id + '!');
+      player.message_queue.push(msg('Welcome janitor ' + player.id + '!'));
+      player.message_queue.push(msg('You are a space janitor of a busy moon settlement'));
+      player.message_queue.push(msg('Push debris out of orbit to keep ships safe!'));
 
       for (var i = 0; i < 25; i++) {
         const r = Math.random() * 50 + 50;
@@ -343,15 +351,15 @@ module.exports.server = {
                 state.debris.push(spawn_debris(p));
               }
 
-              player.message_queue.push_msg("You're fired!!!");
-              player.message_queue.push_msg('Too many ships have been lost!!!!');
+              player.message_queue.push(msg('Too many ships have been lost!!!!'));
+              player.message_queue.push(msg("You're fired!!!"));
             });
           }
 
           g.for_each(this.players, function(player, player_key)
           {
-            player.message_queue.push_msg('What are you doing up there?!');
-            player.message_queue.push_msg('A ship was destroyed!!!');
+            player.message_queue.push(msg('A ship was destroyed!!!'));
+            player.message_queue.push(msg('What are you doing up there?!'));
           });
         }
       }
@@ -368,7 +376,7 @@ module.exports.server = {
       state.convoy_time = k.convoy.spawn_time;
       for (var player_key in this.players)
       {
-        this.players[player_key].message_queue.push_msg('Ship traffic incoming!')
+        this.players[player_key].message_queue.push(msg('Ship traffic incoming!'))
       }
     }
 
