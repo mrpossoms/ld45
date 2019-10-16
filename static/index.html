@@ -55,16 +55,6 @@ var game = {
     }
 };
 
-var lut = {
-    axis: []
-};
-
-// compute random rotation axis look up table
-for(var i = 100; i--;)
-{
-    lut.axis.push([].random_unit());
-}
-
 game.cam.view([0, 0, 0], [0, 0, 0], [0, 1, 0]);
 game.cam.position = [0, 0, 0];
 game.cam.up = [0, 1, 0];
@@ -128,7 +118,7 @@ g.web.pointer.on_press(function ()
     g.web._canvas.requestPointerLock();
 });
 
-g.web.pointer.on_delta(function (event) { });
+g.web.pointer.on_pointer_lock_change(function (event) { });
 
 
 g.web.on_message(function (msg)
@@ -257,14 +247,12 @@ function update_camera(camera, player, dist, dt)
 
 function draw_skybox()
 {
-    var view = [].view([0,0,0], game.cam._forward, game.cam._up);
-
     gl.disable(gl.DEPTH_TEST);
     g.web.assets['mesh/exported-cube'].using_shader('basic_textured')
                              .with_attribute({name:'a_position', buffer: 'positions', components: 3})
                              .with_attribute({name:'a_tex_coord', buffer: 'texture_coords', components: 2})
                              .set_uniform('u_proj').mat4(game.cam.projection())
-                             .set_uniform('u_view').mat4(view)
+                             .set_uniform('u_view').mat4(game.cam.view())
                              .set_uniform('u_model').mat4([].scale(500))
                              .set_uniform('u_texture').texture(g.web.assets['tex/stars'])
                              .draw_tris();
@@ -333,7 +321,6 @@ function draw_safety_indicator(player, debris)
 
 function draw_player(player, q)
 {
-    // const model = [].translate(player.position).mat_mul(player.q.quat_inverse().quat_to_matrix());
     const model = q.quat_inverse().quat_to_matrix().mat_mul([].translate(player.position));
     const mesh = g.web.assets['mesh/player-0'];
 
@@ -360,7 +347,7 @@ function draw_debris(debris)
         .with_attribute({name:'a_tex_coord', buffer: 'texture_coords', components: 2})
         .with_camera(game.cam);
 
-        const q = [].quat_rotation(lut.axis[i % lut.axis.length], game.t);
+        const q = [].quat_rotation(Math.random.unit_vector(i), game.t);
         const s = [].scale(debris.mass);
         const model = s.mat_mul(q.quat_to_matrix()).mat_mul([].translate(debris.position));
 
