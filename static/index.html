@@ -3,10 +3,12 @@
 <style>
 html {
     color: #fff;
+    background-color: #333;
     font-family: Arial, Helvetica, sans-serif;
 }
 
 canvas {
+    background-color: #333;
     position: absolute;
     z-index: 0;
 }
@@ -131,6 +133,9 @@ g.initialize(function ()
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         gl.lineWidth(10);
+    },
+    function(complete) {
+        document.getElementById('server_msg').innerText = Math.ceil(100 * complete) + '%';
     });
 
 	return true;
